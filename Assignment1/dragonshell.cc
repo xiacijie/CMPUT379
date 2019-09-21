@@ -4,7 +4,6 @@
 #include <cstring>
 #include "util.h"
 #include "commandRouter.h"
-
 #define BUFFER_SIZE 1024
 using namespace std;
 
@@ -27,13 +26,18 @@ int main(int argc, char **argv) {
     string line;
     
     //get the input from terminal
-    getline(cin, line);
-
-    //tokenize the commands
+    if (!getline(cin, line)) { //EOF
+        line = "exit";
+        cout << endl;
+    }
+    //tokenize the command
     vector<string> commands =  tokenize(line, " ");
-
-    //command router to deal with different commands
+    // command router
     commandRouter(commands);
+
+
+
+
 
   }
 
