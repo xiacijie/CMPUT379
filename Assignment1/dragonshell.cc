@@ -2,8 +2,12 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 #include "util.h"
 #include "commandRouter.h"
+
 #define BUFFER_SIZE 1024
 using namespace std;
 
@@ -32,8 +36,17 @@ int main(int argc, char **argv) {
     }
     //tokenize the command
     vector<string> commands =  tokenize(line, " ");
-    // command router
-    commandRouter(commands);
+
+    //****************create new process ************
+
+    if (fork()){ // parent process
+        wait(NULL);
+    }
+    else{ // child process
+        // command router
+        commandRouter(commands);
+    }
+
 
 
 
