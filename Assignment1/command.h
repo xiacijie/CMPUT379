@@ -1,4 +1,0 @@
-enum Command {
-    pwd,
-    cd
-};

@@ -2,47 +2,10 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-
-#include <unistd.h>
-#include "command.h"
-
+#include "util.h"
 #define BUFFER_SIZE 1024
 using namespace std;
-/**
- * @brief Tokenize a string 
- * 
- * @param str - The string to tokenize
- * @param delim - The string containing delimiter character(s)
- * @return vector<string> - The list of tokenized strings. Can be empty
- */
-vector<string> tokenize(const string &str, const char *delim) {
-  char* cstr = new char[str.size() + 1];
-  strcpy(cstr, str.c_str());
 
-  char* tokenized_string = strtok(cstr, delim);
-
-  vector<string> tokens;
-  while (tokenized_string != NULL)
-  {
-    tokens.push_back(string(tokenized_string));
-    tokenized_string = strtok(NULL, delim);
-  }
-  delete[] cstr;
-
-  return tokens;
-}
-
-void commandRoute(string first_command, ){
-  switch (command_map[])
-  {
-  case /* constant-expression */:
-    /* code */
-    break;
-  
-  default:
-    break;
-  }
-}
 
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
@@ -66,20 +29,7 @@ int main(int argc, char **argv) {
 
     //tokenize the commands
     vector<string> commands =  tokenize(line, " ");
-    if (commands.size() < 1){ // tokenized commands empty 
-      cout << "Command Not Found!" << endl;
-      continue;
-    }
-    else{
-      string first_command = commands[0];
 
-    }
-
-    char path[BUFFER_SIZE];
-    cout << getcwd(path, BUFFER_SIZE);
-
-
-    cout << line << endl;
   }
 
   return 0;
