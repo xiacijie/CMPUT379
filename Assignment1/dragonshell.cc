@@ -32,17 +32,32 @@ vector<string> tokenize(const string &str, const char *delim) {
   return tokens;
 }
 
+void commandRoute(string first_command, ){
+  switch (command_map[])
+  {
+  case /* constant-expression */:
+    /* code */
+    break;
+  
+  default:
+    break;
+  }
+}
+
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-  string test = "This is a   test string";
-  vector<string> v = tokenize(test," ");
-  for (size_t i = 0; i<v.size();i++){
-    cout << v[i] << endl;
-  }
+  // string test = "This is a   test string";
+  // vector<string> v = tokenize(test," ");
+  // for (size_t i = 0; i<v.size();i++){
+  //   cout << v[i] << endl;
+  // }
+
+  cout << "Welcome to Dragon Shell!" <<endl;
 
   while (true){
+
     cout << "dragon shell > ";
     string line;
     
@@ -51,7 +66,14 @@ int main(int argc, char **argv) {
 
     //tokenize the commands
     vector<string> commands =  tokenize(line, " ");
-    
+    if (commands.size() < 1){ // tokenized commands empty 
+      cout << "Command Not Found!" << endl;
+      continue;
+    }
+    else{
+      string first_command = commands[0];
+
+    }
 
     char path[BUFFER_SIZE];
     cout << getcwd(path, BUFFER_SIZE);
