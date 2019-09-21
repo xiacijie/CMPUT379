@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include "util.h"
+#include "commandRouter.h"
 #define BUFFER_SIZE 1024
 using namespace std;
 
@@ -29,6 +30,9 @@ int main(int argc, char **argv) {
 
     //tokenize the commands
     vector<string> commands =  tokenize(line, " ");
+
+    //command router to deal with different commands
+    commandRouter(commands);
 
   }
 

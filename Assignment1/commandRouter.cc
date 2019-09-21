@@ -1,30 +1,30 @@
 #include "commandRouter.h"
 #include "commands.h"
+#include "commandHandler.h"
 #include <iostream>
 
-void commandRouter(vector<string> commands) {
-    if (commands.size()<1){ //in case command is empty
-        cout << "Error: Command Not Found;";
-    }
-    else{ // deal with the commands
-        string firstCommand = commands[0];
+using namespace std;
 
-        // internal commands
-        if (commands_map.find(firstCommand) != commands_map.end()) {
-            cout << firstCommand << endl;
-        }
-        else{
-            cout << "external" << endl;
-        }
-//        switch (expression)
-//        {
-//        case /* constant-expression */:
-//            /* code */
-//            break;
-//
-//        default:
-//            break;
-//        }
+void commandRouter(vector<string> commands) {
+    if (commands.size() < 1) { //in case commands is empty
+        cout << "Error: Command Not Found;";
+        return;
     }
-    
+
+    string firstCommand = commands[0];
+
+    // internal commands
+    auto it = commands_map.find(firstCommand);
+    if (it != commands_map.end()) {
+        switch (it->second) {
+            case pwd:
+                cmd_pwd();
+                break;
+            default:
+                break;
+        }
+    }
+    else{ // external commands
+        cout << "external" << endl;
+    }
 }
