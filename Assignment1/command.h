@@ -1,0 +1,4 @@
+enum Command {
+    pwd,
+    cd
+};
