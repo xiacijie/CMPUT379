@@ -4,6 +4,7 @@
 #include <cstring>
 #include "util.h"
 #include "commandRouter.h"
+
 #define BUFFER_SIZE 1024
 using namespace std;
 
@@ -25,8 +26,8 @@ int main(int argc, char **argv) {
     cout << "dragon shell > ";
     string line;
     
-    //get the input from termial
-    cin >> line;
+    //get the input from terminal
+    getline(cin, line);
 
     //tokenize the commands
     vector<string> commands =  tokenize(line, " ");

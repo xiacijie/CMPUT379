@@ -20,6 +20,18 @@ void commandRouter(vector<string> commands) {
             case pwd:
                 cmd_pwd();
                 break;
+            case cd:
+                cmd_cd(commands);
+                break;
+            case exit1:
+                cmd_exit();
+                break;
+            case path:
+                cmd_path();
+                break;
+            case a2path:
+                cmd_a2path(commands);
+                break;
             default:
                 break;
         }
