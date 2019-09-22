@@ -11,7 +11,7 @@ using namespace std;
 void cmd_pwd() {
     char path[BUFFER_SIZE];
     cout << getcwd(path,BUFFER_SIZE) << endl;
-    //_exit(0);
+    _exit(0);
 }
 
 void cmd_cd(vector<string> commands) {
@@ -23,7 +23,7 @@ void cmd_cd(vector<string> commands) {
     string path = commands[1];
     if (chdir(path.c_str()) == -1) {
         cout << "dragonshell: No such file or directory" << endl;
-        return;
+        _exit(1);
     }
     _exit(0);
 }
