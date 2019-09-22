@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <signal.h>
 #include "util.h"
 #include "commandRouter.h"
 
@@ -37,20 +38,25 @@ int main(int argc, char **argv) {
     //tokenize the command
     vector<string> commands =  tokenize(line, " ");
 
+    cout << "*** " << getpid() << endl;
     //****************create new process ************
-
-    if (fork()){ // parent process
-        wait(NULL);
+    int status;
+    pid_t pid = fork();
+    if (pid > 0){ // parent process
+        cout << "====== " << pid << endl;
+        waitpid(pid, &status, 0);
+        if (WEXITSTATUS(status) == 2){ //terminate all processes and exit the shell
+            kill(0,SIGTERM);
+            _exit(0);
+        }
     }
-    else{ // child process
+    else if (pid == 0){ // child process
         // command router
         commandRouter(commands);
     }
-
-
-
-
-
+    else{ // error
+        cout << "Error in forking new process" << endl;
+    }
 
   }
 
