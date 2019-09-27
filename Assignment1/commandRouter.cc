@@ -2,41 +2,43 @@
 #include "commands.h"
 #include "commandHandler.h"
 #include <iostream>
+#include <unistd.h>
 
 using namespace std;
 
-void commandRouter(vector<string> commands) {
+void route(vector<string> commands) {
     if (commands.size() < 1) { //in case commands is empty
-        cout << "Error: Command Not Found;";
         return;
     }
 
     string firstCommand = commands[0];
 
-    // internal commands
-    auto it = commands_map.find(firstCommand);
-    if (it != commands_map.end()) {
+    auto it = commandsMap.find(firstCommand);
+
+    /**** internal commands ****/
+    if (it != commandsMap.end()) {
         switch (it->second) {
             case pwd:
-                cmd_pwd();
+                cmdPwd();
                 break;
             case cd:
-                cmd_cd(commands);
+                cmdCd(commands);
                 break;
             case exit1:
-                cmd_exit();
+                cmdExit();
                 break;
             case path:
-                cmd_path();
+                cmdPath();
                 break;
             case a2path:
-                cmd_a2path(commands);
+                cmdA2path(commands);
                 break;
             default:
                 break;
         }
     }
-    else{ // external commands
-        cout << "external" << endl;
+    /**** external commands ****/
+    else{
+        cmdExternal(commands);
     }
 }

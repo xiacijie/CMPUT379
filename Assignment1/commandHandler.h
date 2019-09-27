@@ -6,9 +6,12 @@
 
 using namespace std;
 
-void cmd_pwd();
-void cmd_cd(vector<string> commands);
-void cmd_exit();
-void cmd_path();
-void cmd_a2path(vector<string> commands);
+void terminateAllChildProcesses();
+void cmdPwd();
+void cmdCd(vector<string> commands);
+void cmdExit();
+void cmdPath();
+void cmdA2path(vector<string> commands);
+void cmdExternal(vector<string> commands);
+
 #endif

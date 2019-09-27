@@ -6,6 +6,6 @@
 
 using namespace std;
 
-void commandRouter(vector<string> commands);
+void route(vector<string> commands);
 
 #endif

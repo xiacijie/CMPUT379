@@ -13,7 +13,7 @@ enum Commands {
 };
 
 
-map<string, Commands> commands_map = {
+map<string, Commands> commandsMap = {
     {"pwd", pwd},
     {"cd", cd},
     {"exit",exit1},

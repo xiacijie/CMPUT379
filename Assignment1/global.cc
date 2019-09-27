@@ -6,3 +6,4 @@
 using namespace std;
 
 string PATH = "/bin/:/usr/bin/";
+map<pid_t, bool> processPool;
