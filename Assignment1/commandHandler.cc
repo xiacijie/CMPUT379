@@ -86,23 +86,31 @@ void cmdExternal(vector<string> commands) {
     }
     else if (pid == 0){ // child process
         string firstCommand = commands[0];
-        char *argv[64];
+        char * argv[64];
         for (unsigned int i=1; i < commands.size();i++){
             argv[i-1] = (char*)commands[i].c_str();
         }
 
         argv[commands.size()-1] = NULL;
+
+        // for (unsigned int i=0; i < commands.size();i++){
+        //     cout << NULL << endl;
+        //     cout << argv[i] << endl;
+        //     // argv[i-1] = (char*)commands[i].c_str();
+        // }
+
         char * envp[] = {NULL};
+        char * testv[] = {(char*)"./util.cc", NULL};
 
         /**** use the path directly ****/
-        execve(firstCommand.c_str(), argv, envp);
+        execve(firstCommand.c_str(), testv, envp);
 
         /***** search in PATHs ******/
         vector<string> paths = tokenize(PATH,":");
-
+        cout << "=====" << endl;
         for (unsigned int i = 0 ; i < paths.size(); i ++){
             string path = paths[i] + firstCommand;
-            execve(path.c_str(), argv, envp);
+            execve(path.c_str(), testv, envp);
         }
 
         cout << "dragonshell: Command not found" << endl;
