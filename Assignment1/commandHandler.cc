@@ -5,6 +5,7 @@
 #include "commandHandler.h"
 #include "global.h"
 #include "util.h"
+#include <sys/wait.h>
 
 
 #define BUFFER_SIZE 1024
@@ -86,7 +87,7 @@ void cmdExternal(vector<string> commands) {
     else if (pid == 0){ // child process
         string firstCommand = commands[0];
         char *argv[64];
-        for (int i=1; i < commands.size();i++){
+        for (unsigned int i=1; i < commands.size();i++){
             argv[i-1] = (char*)commands[i].c_str();
         }
 
@@ -99,7 +100,7 @@ void cmdExternal(vector<string> commands) {
         /***** search in PATHs ******/
         vector<string> paths = tokenize(PATH,":");
 
-        for (int i = 0 ; i < paths.size(); i ++){
+        for (unsigned int i = 0 ; i < paths.size(); i ++){
             string path = paths[i] + firstCommand;
             execve(path.c_str(), argv, envp);
         }
