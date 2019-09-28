@@ -26,13 +26,13 @@ void cmdPwd() {
     cout << getcwd(path,BUFFER_SIZE) << endl;
 }
 
-void cmdCd(vector<string> commands) {
-    if (commands.size() < 2){
+void cmdCd(vector<string> words) {
+    if (words.size() < 2){
         cout << "dragonshell: expected argument to 'cd' " << endl;
         return;
     }
 
-    string path = commands[1];
+    string path = words[1];
     if (chdir(path.c_str()) == -1) {
         cout << "dragonshell: No such file or directory" << endl;
         return;
@@ -49,13 +49,13 @@ void cmdPath(){
     cout << "Current PATH: " << PATH << endl;
 }
 
-void cmdA2path(vector<string> commands){
-    if (commands.size() == 1){ // empty path specified
+void cmdA2path(vector<string> words){
+    if (words.size() == 1){ // empty path specified
         PATH = "";
         return;
     }
 
-    string pathLine = commands[1];
+    string pathLine = words[1];
     vector<string> paths = tokenize(pathLine, ":");
     if (paths.size() < 1){
         cout << "Invalid path specified!" << endl;
@@ -79,38 +79,40 @@ void cmdA2path(vector<string> commands){
     PATH = newPath;
 }
 
-void cmdExternal(vector<string> commands) {
+void cmdExternal(vector<string> words, bool isBackgroundJob) {
     pid_t pid = fork();
     if (pid > 0) { // parent process
-        waitpid(pid,NULL,0);
-    }
-    else if (pid == 0){ // child process
-        string firstCommand = commands[0];
-        char * argv[64];
-        for (unsigned int i=1; i < commands.size();i++){
-            argv[i-1] = (char*)commands[i].c_str();
+        /**** background job ****/
+        if (isBackgroundJob){
+            /*** register the pid in processPool to indicate this pid is alive ***/
+            processPool[pid] = true;
+            cout << "PID " << pid << " is running in the background" << endl <<endl;
+        }
+        else{
+            processPool[pid] = true;
+            waitpid(pid,NULL,0);
+            processPool[pid] = false;
         }
 
-        argv[commands.size()-1] = NULL;
+    }
+    else if (pid == 0){ // child process
+        string firstWord = words[0];
+        char * argv[64];
+        for (unsigned int i=0; i < words.size();i++){
+            argv[i] = (char*)words[i].c_str();
+        }
 
-        // for (unsigned int i=0; i < commands.size();i++){
-        //     cout << NULL << endl;
-        //     cout << argv[i] << endl;
-        //     // argv[i-1] = (char*)commands[i].c_str();
-        // }
+        argv[words.size()] = NULL;
 
         char * envp[] = {NULL};
-        char * testv[] = {(char*)"./util.cc", NULL};
 
-        /**** use the path directly ****/
-        execve(firstCommand.c_str(), testv, envp);
+        execve(firstWord.c_str(), argv, envp);
 
         /***** search in PATHs ******/
         vector<string> paths = tokenize(PATH,":");
-        cout << "=====" << endl;
         for (unsigned int i = 0 ; i < paths.size(); i ++){
-            string path = paths[i] + firstCommand;
-            execve(path.c_str(), testv, envp);
+            string path = paths[i] + firstWord;
+            execve(path.c_str(), argv, envp);
         }
 
         cout << "dragonshell: Command not found" << endl;

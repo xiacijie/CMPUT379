@@ -6,6 +6,6 @@
 
 using namespace std;
 
-void route(vector<string> commands);
+void route(vector<string> words);
 
 #endif

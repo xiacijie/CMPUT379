@@ -31,11 +31,16 @@ int main(int argc, char **argv) {
         cout << endl;
     }
 
-    /****** tokenize the command *****/
-    vector<string> commands =  tokenize(line, " ");
+    /*** process multiple commands ***/
+    vector<string> commands = tokenize(line,";");
+    for (string command: commands) {
 
-    /******* command router for handling different commands, internal or external ******/
-    route(commands);
+        /****** tokenize the command *****/
+        vector<string> words =  tokenize(command, " ");
+
+        /******* command router for handling a single command, internal or external ******/
+        route(words);
+    }
 
   }
 

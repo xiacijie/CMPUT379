@@ -11,7 +11,7 @@ void cmdPwd();
 void cmdCd(vector<string> commands);
 void cmdExit();
 void cmdPath();
-void cmdA2path(vector<string> commands);
-void cmdExternal(vector<string> commands);
+void cmdA2path(vector<string> words);
+void cmdExternal(vector<string> words, bool isBackgroundJob);
 
 #endif

@@ -6,14 +6,14 @@
 
 using namespace std;
 
-void route(vector<string> commands) {
-    if (commands.size() < 1) { //in case commands is empty
+void route(vector<string> words) {
+    if (words.size() < 1) { //in case commands is empty
         return;
     }
 
-    string firstCommand = commands[0];
+    string firstWord = words[0];
 
-    auto it = commandsMap.find(firstCommand);
+    auto it = commandsMap.find(firstWord);
 
     /**** internal commands ****/
     if (it != commandsMap.end()) {
@@ -22,7 +22,7 @@ void route(vector<string> commands) {
                 cmdPwd();
                 break;
             case cd:
-                cmdCd(commands);
+                cmdCd(words);
                 break;
             case exit1:
                 cmdExit();
@@ -31,7 +31,7 @@ void route(vector<string> commands) {
                 cmdPath();
                 break;
             case a2path:
-                cmdA2path(commands);
+                cmdA2path(words);
                 break;
             default:
                 break;
@@ -39,6 +39,13 @@ void route(vector<string> commands) {
     }
     /**** external commands ****/
     else{
-        cmdExternal(commands);
+        /*** background job ***/
+        if (words[words.size()-1].compare("&") == 0 && words[0].compare("&") != 0){
+            words.pop_back(); // delete &
+            cmdExternal(words,true);
+        }else{
+            cmdExternal(words,false);
+        }
+
     }
 }
