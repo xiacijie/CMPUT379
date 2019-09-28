@@ -104,15 +104,15 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
 
         argv[words.size()] = NULL;
 
-        char * envp[] = {NULL};
+        char * envp[] = {(char*)("PATH="+PATH).c_str(),NULL};
 
-        execve(firstWord.c_str(), argv, envp);
+        execve((char*)firstWord.c_str(), argv, envp);
 
         /***** search in PATHs ******/
         vector<string> paths = tokenize(PATH,":");
         for (unsigned int i = 0 ; i < paths.size(); i ++){
             string path = paths[i] + firstWord;
-            execve(path.c_str(), argv, envp);
+            execve((char*)path.c_str(), argv, envp);
         }
 
         cout << "dragonshell: Command not found" << endl;
