@@ -16,13 +16,14 @@ void route(vector<string> words) {
 
     string firstWord = words[0];
 
+    /*** handle redirection ***/
     auto itRedirect = find(words.begin(), words.end(), ">");
     int stdoutFdSave = dup(STDOUT_FILENO); /*** save stdout fd, restore later ***/
     if (itRedirect != words.end()){ /*** need redirection ***/
         string fileName = *(next(itRedirect,1));
-        
         int fd;
-        fd = open(fileName.c_str(),O_WRONLY | O_CREAT, 0666);
+        fd = open(fileName.c_str(), O_TRUNC | O_WRONLY | O_CREAT, 0666);
+        words.erase(itRedirect,words.end());
         if (fd == -1){
             cerr <<"Open failed!" <<endl;
             return;
