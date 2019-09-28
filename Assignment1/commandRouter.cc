@@ -3,6 +3,9 @@
 #include "commandHandler.h"
 #include <iostream>
 #include <unistd.h>
+#include <fcntl.h>
+#include <string>
+#include <algorithm>
 
 using namespace std;
 
@@ -13,6 +16,24 @@ void route(vector<string> words) {
 
     string firstWord = words[0];
 
+    auto itRedirect = find(words.begin(), words.end(), ">");
+    int stdoutFdSave = dup(STDOUT_FILENO); /*** save stdout fd, restore later ***/
+    if (itRedirect != words.end()){ /*** need redirection ***/
+        string fileName = *(next(itRedirect,1));
+        
+        int fd;
+        fd = open(fileName.c_str(),O_WRONLY | O_CREAT, 0666);
+        if (fd == -1){
+            cerr <<"Open failed!" <<endl;
+            return;
+        }
+
+        if (dup2(fd, STDOUT_FILENO) == -1) {
+            cerr << "Dup2 failed!" << endl;
+            return;
+        }
+        close(fd);
+    }
     auto it = commandsMap.find(firstWord);
 
     /**** internal commands ****/
@@ -48,4 +69,9 @@ void route(vector<string> words) {
         }
 
     }
+
+    /*** restore stdout ***/
+    dup2(stdoutFdSave, STDOUT_FILENO);
+    close(stdoutFdSave);
+
 }
