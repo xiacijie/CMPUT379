@@ -2,24 +2,17 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include "commandHandler.h"
 #include "global.h"
 #include "util.h"
-#include <sys/wait.h>
+#include "backgroundHandler.h"
+
 
 
 #define BUFFER_SIZE 1024
 
 using namespace std;
-
-void terminateAllChildProcesses() {
-    for (auto it = processPool.begin(); it!= processPool.end(); it++) {
-        if (it->second == true) { // if the process is active
-            cout << it->first << endl;
-            kill(it->first, SIGTERM); // kill this process
-        }
-    }
-}
 
 void cmdPwd() {
     char path[BUFFER_SIZE];
@@ -82,11 +75,13 @@ void cmdA2path(vector<string> words){
 void cmdExternal(vector<string> words, bool isBackgroundJob) {
     pid_t pid = fork();
     if (pid > 0) { // parent process
-        /**** background job ****/
+
         if (isBackgroundJob){
             /*** register the pid in processPool to indicate this pid is alive ***/
             processPool[pid] = true;
-            cout << "PID " << pid << " is running in the background" << endl <<endl;
+            cout << "PID " << pid << " is running in the background" <<endl;
+
+         
         }
         else{
             processPool[pid] = true;
@@ -96,6 +91,10 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
 
     }
     else if (pid == 0){ // child process
+        if (isBackgroundJob){
+            /*** hide the output from the terminal ***/
+            hideOutput();
+        }
         string firstWord = words[0];
         char * argv[64];
         for (unsigned int i=0; i < words.size();i++){

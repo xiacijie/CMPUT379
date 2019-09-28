@@ -10,55 +10,15 @@
 #include "util.h"
 #include "commandRouter.h"
 #include "global.h"
+#include "redirectionHandler.h"
 
 #define BUFFER_SIZE 1024
 using namespace std;
 
-/*** handle redirection ***/
-void handleRedirection(string* command){
-
-  vector<string> words = tokenize(*command,">");
-  if (words.size() < 2){
-    *command = "";
-    cerr << "Invalid redirection syntax" << endl;
-    return;
-  }
-
-  /*** only keeps the commands part to execute ***/
-  *command = words[0];
-  
-  string fileName = tokenize(words[1]," ")[0];
-  int fd = open(fileName.c_str(), O_TRUNC | O_WRONLY | O_CREAT, 0666);
-
-  if (fd == -1){
-      cerr <<"Fail to open" << fileName << endl;
-      return;
-  }
-
-  /*** redirect STDOUT to the file descriptor ***/
-  if (dup2(fd, STDOUT_FILENO) == -1) {
-      cerr << "Dup2 failed!" << endl;
-      return;
-  }
-  close(fd);
-  
-}
-
 /*** handle background job ***/
 void handleBackgroundJob(vector<string> words){
-  words.pop_back(); // delete &
-  int fd = open("/dev/null",O_WRONLY);
-  if (fd == -1){
-    cerr << "Fail to open /dev/null" << endl;
-    return;
-  }
 
-  /*** redirect STDOUT to /dev/null ***/
-  if (dup2(fd, STDOUT_FILENO) == -1) {
-    cerr << "Dup2 failed" << endl;
-    return;
-  }
-  close(fd);
+  words.pop_back(); // delete &
 }
 
 int main(int argc, char **argv) {
@@ -97,7 +57,7 @@ int main(int argc, char **argv) {
         /*** check if it is a background job ***/
         bool isBackgoroundJob = false;
         if (words[words.size()-1].compare("&") == 0 && words[0].compare("&") != 0){
-          handleBackgroundJob(words);
+          words.pop_back(); //delete &
           isBackgoroundJob = true;
         }
 

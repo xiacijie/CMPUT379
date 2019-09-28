@@ -6,7 +6,8 @@
 
 using namespace std;
 
-void terminateAllChildProcesses();
+
+
 void cmdPwd();
 void cmdCd(vector<string> commands);
 void cmdExit();
