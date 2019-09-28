@@ -81,7 +81,6 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
             processPool[pid] = true;
             cout << "PID " << pid << " is running in the background" <<endl;
 
-         
         }
         else{
             processPool[pid] = true;
@@ -91,10 +90,12 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
 
     }
     else if (pid == 0){ // child process
+
         if (isBackgroundJob){
             /*** hide the output from the terminal ***/
             hideOutput();
         }
+
         string firstWord = words[0];
         char * argv[64];
         for (unsigned int i=0; i < words.size();i++){
@@ -105,11 +106,14 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
 
         char * envp[] = {(char*)("PATH="+PATH).c_str(),NULL};
 
-
-        /***** search in all PATHs ******/
+        char currentDir[BUFFER_SIZE];
+        string currentDirString(getcwd(currentDir,BUFFER_SIZE));
         vector<string> paths = tokenize(PATH,":");
-        paths.insert(paths.begin(),"");
-        for (unsigned int i = 0 ; i < paths.size(); i ++){
+
+        paths.insert(paths.begin(),""); /*** in case the user enter the full path of the command ***/
+        paths.insert(paths.begin(),currentDirString); /*** in case the user want to run the command in the current Dir ***/
+
+        for (unsigned int i = 0 ; i < paths.size(); i ++){ /***** search in all PATHs ******/
             string path = paths[i] + "/" + firstWord;
             execve((char*)path.c_str(), argv, envp);
         }

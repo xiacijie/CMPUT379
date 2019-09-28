@@ -1,0 +1,25 @@
+total 200
+drwxr-xr-x 4 parallels parallels   4096 Sep 28 15:40 .
+drwxr-xr-x 4 parallels parallels   4096 Sep 28 01:04 ..
+-rw-r--r-- 1 parallels parallels   6148 Sep 28 01:04 .DS_Store
+drwxr-xr-x 2 parallels parallels   4096 Sep 28 01:04 .idea
+drwxr-xr-x 2 parallels parallels   4096 Sep 28 01:04 .vscode
+-rw-r--r-- 1 parallels parallels    261 Sep 28 01:04 Makefile
+-rw-r--r-- 1 parallels parallels    156 Sep 28 01:04 SignalHandler.h
+-rw-rw-r-- 1 parallels parallels    760 Sep 28 15:31 backgroundHandler.cc
+-rw-rw-r-- 1 parallels parallels    120 Sep 28 15:27 backgroundHandler.h
+-rw-r--r-- 1 parallels parallels   2933 Sep 28 15:30 commandHandler.cc
+-rw-r--r-- 1 parallels parallels    301 Sep 28 15:28 commandHandler.h
+-rw-r--r-- 1 parallels parallels   1013 Sep 28 01:27 commandRouter.cc
+-rw-r--r-- 1 parallels parallels    173 Sep 28 01:26 commandRouter.h
+-rw-r--r-- 1 parallels parallels    291 Sep 28 01:04 commands.h
+-rwxr-xr-x 1 parallels parallels 108624 Sep 28 15:36 dragonshell
+-rwxr-xr-x 1 parallels parallels   1723 Sep 28 15:36 dragonshell.cc
+-rw-r--r-- 1 parallels parallels    150 Sep 28 01:04 global.cc
+-rw-r--r-- 1 parallels parallels    412 Sep 28 01:04 global.h
+-rw-r--r-- 1 parallels parallels      0 Sep 28 15:41 lsout.txt
+-rw-rw-r-- 1 parallels parallels    825 Sep 28 15:36 redirectionHandler.cc
+-rw-rw-r-- 1 parallels parallels    143 Sep 28 15:36 redirectionHandler.h
+-rw-r--r-- 1 parallels parallels     46 Sep 28 01:04 signalHandler.cc
+-rw-r--r-- 1 parallels parallels    684 Sep 28 01:04 util.cc
+-rw-r--r-- 1 parallels parallels    271 Sep 28 01:04 util.h
