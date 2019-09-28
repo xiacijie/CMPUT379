@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void route(vector<string> words) {
+void route(vector<string> words, bool isBackgroundJob) {
 
     if (words.size() < 1) { //in case commands is empty
         return;
@@ -45,14 +45,7 @@ void route(vector<string> words) {
 
     /**** external commands ****/
     else{
-        /*** background job ***/
-        if (words[words.size()-1].compare("&") == 0 && words[0].compare("&") != 0){
-            words.pop_back(); // delete &
-            cmdExternal(words,true);
-        }else{
-            cmdExternal(words,false);
-        }
-
+        cmdExternal(words, isBackgroundJob);
     }
 
     

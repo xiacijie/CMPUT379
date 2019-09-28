@@ -6,6 +6,6 @@
 
 using namespace std;
 
-void route(vector<string> words);
+void route(vector<string> words, bool isBackgroundJob);
 
 #endif
