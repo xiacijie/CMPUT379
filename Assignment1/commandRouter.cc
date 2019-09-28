@@ -15,8 +15,6 @@ void route(vector<string> words, bool isBackgroundJob) {
         return;
     }
 
-
-
     string firstWord = words[0];
     auto it = commandsMap.find(firstWord);
 

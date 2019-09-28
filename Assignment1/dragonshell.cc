@@ -11,6 +11,7 @@
 #include "commandRouter.h"
 #include "global.h"
 #include "redirectionHandler.h"
+#include "SignalHandler.h"
 
 #define BUFFER_SIZE 1024
 using namespace std;
@@ -69,6 +70,7 @@ int main(int argc, char **argv) {
 
   
   logWelcomeMessage();
+  registerSignalHandlers();
 
   while (true){
 
