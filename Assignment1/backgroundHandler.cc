@@ -17,7 +17,13 @@ void hideOutput(){
 
     /*** redirect STDOUT to /dev/null ***/
     if (dup2(fd, STDOUT_FILENO) == -1) {
-        cerr << "Dup2 failed" << endl;
+        cerr << "Dup2 STDOUT failed" << endl;
+        return;
+    }
+
+    /*** redirect STDERR to /dev/null ***/
+    if (dup2(fd, STDERR_FILENO) == -1) {
+        cerr << "Dup2 STDERR failed" << endl;
         return;
     }
     close(fd);

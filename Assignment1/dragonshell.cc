@@ -88,8 +88,10 @@ int main(int argc, char **argv) {
 
     for (string command: commands) {
 
-        /*** save stdout fd, restore it later ***/
+        /*** save stdout, stdin, stderr fds, restore them later in case of redirection or pipes ***/
         int stdoutFdSave = dup(STDOUT_FILENO); 
+        int stderrFdSave = dup(STDERR_FILENO);
+        int stdinFdSave = dup(STDIN_FILENO);
 
         /*** check if need redirection ***/
         if (command.find(">") != string::npos){
@@ -109,8 +111,10 @@ int main(int argc, char **argv) {
         /******* command router for handling a single command, internal or external ******/
         route(words,isBackgoroundJob);
 
-        /*** restore stdout ***/
+        /*** restore stdout, stderr, stdin ***/
         dup2(stdoutFdSave, STDOUT_FILENO);
+        dup2(stderrFdSave,STDERR_FILENO);
+        dup2(stdinFdSave, STDIN_FILENO);
         close(stdoutFdSave);
     }
 
