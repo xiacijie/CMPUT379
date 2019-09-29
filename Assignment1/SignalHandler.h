@@ -6,7 +6,6 @@
 #define ASSIGNMENT1_SIGNALHANDLER_H
 
 void registerSignalHandlers();
-void handleSIGINT(int sigNum);
-void handleSIGTSTP(int sigNum);
+void handleSig(int sigNum);
 
 #endif //ASSIGNMENT1_SIGNALHANDLER_H

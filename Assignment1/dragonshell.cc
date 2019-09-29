@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <string.h>
 #include "util.h"
 #include "commandRouter.h"
 #include "global.h"
@@ -62,7 +63,6 @@ void logWelcomeMessage(){
 "# 蛤蛤";
   cout << msg << endl;
   cout << endl;
-  cout << "Welcome to Dragon Shell!" <<endl;
 
 }
 
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 
     for (string command: commands) {
 
-        /*** save stdout fd, restore later ***/
+        /*** save stdout fd, restore it later ***/
         int stdoutFdSave = dup(STDOUT_FILENO); 
 
         /*** check if need redirection ***/
@@ -96,15 +96,15 @@ int main(int argc, char **argv) {
           handleRedirection(&command);
         }
 
-        /****** tokenize the command *****/
-        vector<string> words =  tokenize(command, " ");
-
         /*** check if it is a background job ***/
         bool isBackgoroundJob = false;
-        if (words[words.size()-1].compare("&") == 0 && words[0].compare("&") != 0){
-          words.pop_back(); //delete &
+        if (command.back() == '&'){
+          command.erase(command.end()-1); /*** delete & ***/
           isBackgoroundJob = true;
         }
+
+        /****** tokenize the command *****/
+        vector<string> words =  tokenize(command, " ");
 
         /******* command router for handling a single command, internal or external ******/
         route(words,isBackgoroundJob);
