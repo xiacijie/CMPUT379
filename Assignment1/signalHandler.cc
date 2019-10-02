@@ -5,8 +5,8 @@
 #include <vector>
 #include <string>
 #include <unistd.h>
-#include "SignalHandler.h"
-#include "signal.h"
+#include <signal.h>
+#include "signalHandler.h"
 #include "global.h"
 
 

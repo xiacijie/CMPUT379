@@ -9,10 +9,10 @@
 
 using namespace std;
 
-void route(vector<string> words, bool isBackgroundJob) {
+int route(vector<string> words, bool isBackgroundJob) {
 
     if (words.size() < 1) { //in case commands is empty
-        return;
+        return 0;
     }
 
     string firstWord = words[0];
@@ -29,6 +29,7 @@ void route(vector<string> words, bool isBackgroundJob) {
                 break;
             case exit1:
                 cmdExit();
+                return 1;
                 break;
             case path:
                 cmdPath();
@@ -45,6 +46,10 @@ void route(vector<string> words, bool isBackgroundJob) {
     else{
         cmdExternal(words, isBackgroundJob);
     }
+
+    return 0;
+
+
 
     
 

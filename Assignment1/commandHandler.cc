@@ -35,7 +35,6 @@ void cmdCd(vector<string> words) {
 void cmdExit(){
     cout << "Exiting" << endl;
     terminateAllChildProcesses();
-    _exit(0);
 }
 
 void cmdPath(){
@@ -104,7 +103,7 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
 
         argv[words.size()] = NULL;
 
-        char * envp[] = {(char*)("PATH="+PATH).c_str(),NULL};
+        char * envp[] = {NULL};
 
         char currentDir[BUFFER_SIZE];
         string currentDirString(getcwd(currentDir,BUFFER_SIZE));

@@ -12,7 +12,7 @@
 #include "commandRouter.h"
 #include "global.h"
 #include "redirectionHandler.h"
-#include "SignalHandler.h"
+#include "signalHandler.h"
 
 #define BUFFER_SIZE 1024
 using namespace std;
@@ -109,13 +109,21 @@ int main(int argc, char **argv) {
         vector<string> words =  tokenize(command, " ");
 
         /******* command router for handling a single command, internal or external ******/
-        route(words,isBackgoroundJob);
+        if (route(words,isBackgoroundJob)){
+          return 0;
+        }
 
         /*** restore stdout, stderr, stdin ***/
         dup2(stdoutFdSave, STDOUT_FILENO);
         dup2(stderrFdSave,STDERR_FILENO);
         dup2(stdinFdSave, STDIN_FILENO);
         close(stdoutFdSave);
+
+
+        // /*** free the memory ***/
+        // for( auto it = words.begin();it != words.end();it++){
+        //   delete &it;
+        // }
     }
 
   }
