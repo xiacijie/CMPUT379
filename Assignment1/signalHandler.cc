@@ -8,7 +8,7 @@
 #include "SignalHandler.h"
 #include "signal.h"
 #include "global.h"
-#include "commandRouter.h"
+
 
 
 using namespace std;
