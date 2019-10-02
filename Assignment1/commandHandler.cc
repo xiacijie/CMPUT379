@@ -71,6 +71,35 @@ void cmdA2path(vector<string> words){
     PATH = newPath;
 }
 
+void _executeCmd(vector<string> words){
+
+    string firstWord = words[0];
+    char * argv[64];
+    for (unsigned int i=0; i < words.size();i++){
+        argv[i] = (char*)words[i].c_str();
+    }
+
+    argv[words.size()] = NULL;
+
+    char * envp[] = {NULL};
+
+    char currentDir[BUFFER_SIZE];
+    string currentDirString(getcwd(currentDir,BUFFER_SIZE));
+    vector<string> paths = tokenize(PATH,":");
+
+    paths.insert(paths.begin(),""); /*** in case the user enter the full path of the command ***/
+    paths.insert(paths.begin(),currentDirString); /*** in case the user want to run the command in the current Dir ***/
+
+    for (unsigned int i = 0 ; i < paths.size(); i ++){ /***** search in all PATHs ******/
+        string path = paths[i] + "/" + firstWord;
+        execve((char*)path.c_str(), argv, envp);
+    }
+
+    cerr << "dragonshell: Command not found" << endl;
+    _exit(1);
+
+}
+
 void cmdExternal(vector<string> words, bool isBackgroundJob) {
     pid_t pid = fork();
     if (pid > 0) { // parent process
@@ -94,31 +123,8 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
             /*** hide the output from the terminal ***/
             hideOutput();
         }
-
-        string firstWord = words[0];
-        char * argv[64];
-        for (unsigned int i=0; i < words.size();i++){
-            argv[i] = (char*)words[i].c_str();
-        }
-
-        argv[words.size()] = NULL;
-
-        char * envp[] = {NULL};
-
-        char currentDir[BUFFER_SIZE];
-        string currentDirString(getcwd(currentDir,BUFFER_SIZE));
-        vector<string> paths = tokenize(PATH,":");
-
-        paths.insert(paths.begin(),""); /*** in case the user enter the full path of the command ***/
-        paths.insert(paths.begin(),currentDirString); /*** in case the user want to run the command in the current Dir ***/
-
-        for (unsigned int i = 0 ; i < paths.size(); i ++){ /***** search in all PATHs ******/
-            string path = paths[i] + "/" + firstWord;
-            execve((char*)path.c_str(), argv, envp);
-        }
-
-        cerr << "dragonshell: Command not found" << endl;
-        _exit(1);
+        _executeCmd(words);
+        
     }
     else{
         cout << "Error in forking the child process" << endl;

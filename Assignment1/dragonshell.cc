@@ -98,6 +98,11 @@ int main(int argc, char **argv) {
           handleRedirection(&command);
         }
 
+        /*** check if it is a pipe ***/
+        if (command.find("|") != string::npos){
+          cout << "pipe" << endl;
+        }
+
         /*** check if it is a background job ***/
         bool isBackgoroundJob = false;
         if (command.back() == '&'){
@@ -110,7 +115,7 @@ int main(int argc, char **argv) {
 
         /******* command router for handling a single command, internal or external ******/
         if (route(words,isBackgoroundJob)){
-          return 0;
+          return 0; //exit
         }
 
         /*** restore stdout, stderr, stdin ***/
@@ -119,11 +124,6 @@ int main(int argc, char **argv) {
         dup2(stdinFdSave, STDIN_FILENO);
         close(stdoutFdSave);
 
-
-        // /*** free the memory ***/
-        // for( auto it = words.begin();it != words.end();it++){
-        //   delete &it;
-        // }
     }
 
   }
