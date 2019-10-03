@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <algorithm> 
 #include "commandHandler.h"
 #include "global.h"
 #include "util.h"
@@ -101,20 +102,23 @@ void _executeCmd(vector<string> words){
 }
 
 void cmdExternal(vector<string> words, bool isBackgroundJob) {
+
+
     pid_t pid = fork();
+
+
     if (pid > 0) { // parent process
 
-        if (isBackgroundJob){
-            /*** register the pid in processPool to indicate this pid is alive ***/
-            processPool[pid] = true;
-            cout << "PID " << pid << " is running in the background" <<endl;
+        /*** register the pid in processPool ***/
+        processPool[pid] = true;
 
+        if (isBackgroundJob) {
+            cout << "PID " << pid << " is running in the background" <<endl;
         }
         else{
-            processPool[pid] = true;
-            waitpid(pid,NULL,0);
-            processPool[pid] = false;
+            waitpid(pid, NULL, 0);
         }
+
 
     }
     else if (pid == 0){ // child process
@@ -127,8 +131,44 @@ void cmdExternal(vector<string> words, bool isBackgroundJob) {
         
     }
     else{
-        cout << "Error in forking the child process" << endl;
+        cerr << "Error in forking the child process" << endl;
     }
 
 
 }
+
+
+        // if (isPipe){
+        //     pid_t pid2 =fork();
+        //     if (pid2 > 0){
+        //         close(fd[0]);
+        //         dup2(fd[1],STDOUT_FILENO);
+        //         close(fd[1]);
+        //         _executeCmd(leftWords);
+        //     }
+        // }
+
+        //  if (isPipe){
+        //     close(fd[1]);
+        //     dup2(fd[0],STDIN_FILENO);
+        //     close(fd[0]);
+        // }
+
+        //         if (isPipe){
+        //     pid_t pid2 = fork();
+        //     if (pid2 > 0){
+        //         close(fd[0]);
+        //         dup2(fd[1],STDOUT_FILENO);
+        //         close(fd[1]);
+        //         _executeCmd(leftWords);
+        //     }else if (pid2 == 0){
+        //         close(fd[1]);
+        //         dup2(fd[0],STDIN_FILENO);
+        //         close(fd[0]);
+        //         _executeCmd(words);
+        //     }else{
+        //         cerr << "Error in forking the child process" << endl;
+        //     }
+        //     cout << "FF" <<endl;
+        //     _exit(0);
+        // }

@@ -13,6 +13,7 @@
 #include "global.h"
 #include "redirectionHandler.h"
 #include "signalHandler.h"
+#include "pipeHandler.h"
 
 #define BUFFER_SIZE 1024
 using namespace std;
@@ -66,6 +67,26 @@ void logWelcomeMessage(){
 
 }
 
+int singleCommand(string command){
+
+  /*** check if it is a background job ***/
+  bool isBackgoroundJob = false;
+  if (command.back() == '&'){
+    command.erase(command.end()-1); /*** delete & ***/
+    isBackgoroundJob = true;
+  }
+
+  /****** tokenize the command *****/
+  vector<string> words =  tokenize(command, " ");
+
+  /******* command router for handling a single command, internal or external ******/
+  if (route(words,isBackgoroundJob)){
+    return 1; //exit
+  }
+
+  return 0;
+}
+
 int main(int argc, char **argv) {
 
   
@@ -99,23 +120,28 @@ int main(int argc, char **argv) {
         }
 
         /*** check if it is a pipe ***/
-        if (command.find("|") != string::npos){
-          cout << "pipe" << endl;
+        vector<string> pipes = tokenize(command,"|");
+        if (pipes.size() == 2){
+          int i = 0;
+          handlePipe();
+          for (string pipe:pipes){
+            if (i == 0){
+              leftPipe();
+              i++;
+            }
+            else{
+              rightPipe();
+            }
+            //cout << "|" << endl;
+            if (singleCommand(pipe) == 1){
+              return 0;
+            }
+          }
         }
-
-        /*** check if it is a background job ***/
-        bool isBackgoroundJob = false;
-        if (command.back() == '&'){
-          command.erase(command.end()-1); /*** delete & ***/
-          isBackgoroundJob = true;
-        }
-
-        /****** tokenize the command *****/
-        vector<string> words =  tokenize(command, " ");
-
-        /******* command router for handling a single command, internal or external ******/
-        if (route(words,isBackgoroundJob)){
-          return 0; //exit
+        else{
+          if (singleCommand(command) == 1){
+            return 0;
+          }
         }
 
         /*** restore stdout, stderr, stdin ***/
@@ -123,6 +149,8 @@ int main(int argc, char **argv) {
         dup2(stderrFdSave,STDERR_FILENO);
         dup2(stdinFdSave, STDIN_FILENO);
         close(stdoutFdSave);
+        close(stderrFdSave);
+        close(stdinFdSave);
 
     }
 
