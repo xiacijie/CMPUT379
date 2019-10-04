@@ -61,52 +61,14 @@ void logWelcomeMessage(){
 "# ################### ####  ##############\n"
 "# ######################### ##############\n"
 "#\n"
-"# 蛤蛤";
+"Welcome to dragon shell!";
   cout << msg << endl;
   cout << endl;
 
 }
 
-int singleCommand(string command){
-  /*** save stdout, stdin, stderr fds, restore them later in case of redirection or pipes ***/
-  int stdoutFdSave = dup(STDOUT_FILENO); 
-  int stderrFdSave = dup(STDERR_FILENO);
-  int stdinFdSave = dup(STDIN_FILENO);
-
-  /*** check if need redirection ***/
-  if (command.find(">") != string::npos){
-    handleRedirection(&command);
-  }
-
-  /*** check if it is a background job ***/
-  bool isBackgoroundJob = false;
-  if (command.back() == '&'){
-    command.erase(command.end()-1); /*** delete & ***/
-    isBackgoroundJob = true;
-  }
-
-  /****** tokenize the command *****/
-  vector<string> words =  tokenize(command, " ");
-
-  /******* command router for handling a single command, internal or external ******/
-  if (route(words,isBackgoroundJob)){
-    return 1; //exit
-  }
-
-   /*** restore stdout, stderr, stdin ***/
-    dup2(stdoutFdSave, STDOUT_FILENO);
-    dup2(stderrFdSave,STDERR_FILENO);
-    dup2(stdinFdSave, STDIN_FILENO);
-    close(stdoutFdSave);
-    close(stderrFdSave);
-    close(stdinFdSave);
-
-  return 0;
-}
-
 int main(int argc, char **argv) {
 
-  
   logWelcomeMessage();
   registerSignalHandlers();
 
@@ -129,7 +91,7 @@ int main(int argc, char **argv) {
         /*** check if it is a pipe ***/
         vector<string> pipes = tokenize(command,"|");
         if (pipes.size() == 2){
-            pipeRoute(tokenize(pipes[0]," "), tokenize(pipes[1]," "));
+            pipeCommand(pipes[0],pipes[1]);
         }
         else{
           if (singleCommand(command) == 1){

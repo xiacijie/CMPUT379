@@ -3,6 +3,8 @@
 #include "global.h"
 #include "commandHandler.h"
 #include "backgroundHandler.h"
+#include "redirectionHandler.h"
+#include "util.h"
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>
@@ -115,4 +117,56 @@ void pipeRoute(vector<string> words1, vector<string> words2){
             cmdExternal(words2);
         }
     }
+}
+
+int singleCommand(string command){
+  /*** save stdout, stdin, stderr fds, restore them later in case of redirection or pipes ***/
+  int stdoutFdSave = dup(STDOUT_FILENO); 
+  int stderrFdSave = dup(STDERR_FILENO);
+  int stdinFdSave = dup(STDIN_FILENO);
+
+  /*** check if need redirection ***/
+  if (command.find(">") != string::npos){
+    handleRedirection(&command);
+  }
+
+  /*** check if it is a background job ***/
+  bool isBackgoroundJob = false;
+  if (command.back() == '&'){
+    command.erase(command.end()-1); /*** delete & ***/
+    isBackgoroundJob = true;
+  }
+
+  /****** tokenize the command *****/
+  vector<string> words =  tokenize(command, " ");
+
+  /******* command router for handling a single command, internal or external ******/
+  if (route(words,isBackgoroundJob)){
+    return 1; //exit
+  }
+
+   /*** restore stdout, stderr, stdin ***/
+    dup2(stdoutFdSave, STDOUT_FILENO);
+    dup2(stderrFdSave,STDERR_FILENO);
+    dup2(stdinFdSave, STDIN_FILENO);
+    close(stdoutFdSave);
+    close(stderrFdSave);
+    close(stdinFdSave);
+
+  return 0;
+}
+
+void pipeCommand(string comand1, string command2){
+
+  int stdoutFdSave = dup(STDOUT_FILENO); 
+  int stdinFdSave = dup(STDIN_FILENO);
+
+  pipeRoute(tokenize(comand1," "), tokenize(command2," "));
+
+  /*** restore stdout stdin ***/
+  dup2(stdoutFdSave, STDOUT_FILENO);
+  dup2(stdinFdSave, STDIN_FILENO);
+  close(stdoutFdSave);
+  close(stdinFdSave);
+
 }
