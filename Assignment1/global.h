@@ -18,5 +18,5 @@ extern string PATH;
 /**** key: pid, value: if the process is active ****/
 extern map<pid_t, bool> processPool;
 
-extern int fd[2];
+extern string myfifo;
 #endif //ASSIGNMENT1_GLOBAL_H

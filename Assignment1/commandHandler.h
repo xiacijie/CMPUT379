@@ -6,13 +6,11 @@
 
 using namespace std;
 
-
-
 void cmdPwd();
 void cmdCd(vector<string> commands);
 void cmdExit();
 void cmdPath();
 void cmdA2path(vector<string> words);
-void cmdExternal(vector<string> words, bool isBackgroundJob);
-void _executeCmd(vector<string> words);
+void cmdExternal(vector<string> words);
+
 #endif

@@ -68,6 +68,15 @@ void logWelcomeMessage(){
 }
 
 int singleCommand(string command){
+  /*** save stdout, stdin, stderr fds, restore them later in case of redirection or pipes ***/
+  int stdoutFdSave = dup(STDOUT_FILENO); 
+  int stderrFdSave = dup(STDERR_FILENO);
+  int stdinFdSave = dup(STDIN_FILENO);
+
+  /*** check if need redirection ***/
+  if (command.find(">") != string::npos){
+    handleRedirection(&command);
+  }
 
   /*** check if it is a background job ***/
   bool isBackgoroundJob = false;
@@ -83,6 +92,14 @@ int singleCommand(string command){
   if (route(words,isBackgoroundJob)){
     return 1; //exit
   }
+
+   /*** restore stdout, stderr, stdin ***/
+    dup2(stdoutFdSave, STDOUT_FILENO);
+    dup2(stderrFdSave,STDERR_FILENO);
+    dup2(stdinFdSave, STDIN_FILENO);
+    close(stdoutFdSave);
+    close(stderrFdSave);
+    close(stdinFdSave);
 
   return 0;
 }
@@ -109,48 +126,16 @@ int main(int argc, char **argv) {
 
     for (string command: commands) {
 
-        /*** save stdout, stdin, stderr fds, restore them later in case of redirection or pipes ***/
-        int stdoutFdSave = dup(STDOUT_FILENO); 
-        int stderrFdSave = dup(STDERR_FILENO);
-        int stdinFdSave = dup(STDIN_FILENO);
-
-        /*** check if need redirection ***/
-        if (command.find(">") != string::npos){
-          handleRedirection(&command);
-        }
-
         /*** check if it is a pipe ***/
         vector<string> pipes = tokenize(command,"|");
         if (pipes.size() == 2){
-          int i = 0;
-          handlePipe();
-          for (string pipe:pipes){
-            if (i == 0){
-              leftPipe();
-              i++;
-            }
-            else{
-              rightPipe();
-            }
-            //cout << "|" << endl;
-            if (singleCommand(pipe) == 1){
-              return 0;
-            }
-          }
+            pipeRoute(tokenize(pipes[0]," "), tokenize(pipes[1]," "));
         }
         else{
           if (singleCommand(command) == 1){
             return 0;
           }
         }
-
-        /*** restore stdout, stderr, stdin ***/
-        dup2(stdoutFdSave, STDOUT_FILENO);
-        dup2(stderrFdSave,STDERR_FILENO);
-        dup2(stdinFdSave, STDIN_FILENO);
-        close(stdoutFdSave);
-        close(stderrFdSave);
-        close(stdinFdSave);
 
     }
 

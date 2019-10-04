@@ -7,4 +7,4 @@ using namespace std;
 
 string PATH = "/bin/:/usr/bin/";
 map<pid_t, bool> processPool;
-int fd[2];
+string myfifo = "/tmp/myfifo";

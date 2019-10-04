@@ -72,7 +72,7 @@ void cmdA2path(vector<string> words){
     PATH = newPath;
 }
 
-void _executeCmd(vector<string> words){
+void cmdExternal(vector<string> words) {
 
     string firstWord = words[0];
     char * argv[64];
@@ -99,76 +99,6 @@ void _executeCmd(vector<string> words){
     cerr << "dragonshell: Command not found" << endl;
     _exit(1);
 
+    
 }
 
-void cmdExternal(vector<string> words, bool isBackgroundJob) {
-
-
-    pid_t pid = fork();
-
-
-    if (pid > 0) { // parent process
-
-        /*** register the pid in processPool ***/
-        processPool[pid] = true;
-
-        if (isBackgroundJob) {
-            cout << "PID " << pid << " is running in the background" <<endl;
-        }
-        else{
-            waitpid(pid, NULL, 0);
-        }
-
-
-    }
-    else if (pid == 0){ // child process
-
-        if (isBackgroundJob){
-            /*** hide the output from the terminal ***/
-            hideOutput();
-        }
-        _executeCmd(words);
-        
-    }
-    else{
-        cerr << "Error in forking the child process" << endl;
-    }
-
-
-}
-
-
-        // if (isPipe){
-        //     pid_t pid2 =fork();
-        //     if (pid2 > 0){
-        //         close(fd[0]);
-        //         dup2(fd[1],STDOUT_FILENO);
-        //         close(fd[1]);
-        //         _executeCmd(leftWords);
-        //     }
-        // }
-
-        //  if (isPipe){
-        //     close(fd[1]);
-        //     dup2(fd[0],STDIN_FILENO);
-        //     close(fd[0]);
-        // }
-
-        //         if (isPipe){
-        //     pid_t pid2 = fork();
-        //     if (pid2 > 0){
-        //         close(fd[0]);
-        //         dup2(fd[1],STDOUT_FILENO);
-        //         close(fd[1]);
-        //         _executeCmd(leftWords);
-        //     }else if (pid2 == 0){
-        //         close(fd[1]);
-        //         dup2(fd[0],STDIN_FILENO);
-        //         close(fd[0]);
-        //         _executeCmd(words);
-        //     }else{
-        //         cerr << "Error in forking the child process" << endl;
-        //     }
-        //     cout << "FF" <<endl;
-        //     _exit(0);
-        // }

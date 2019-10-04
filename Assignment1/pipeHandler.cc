@@ -2,24 +2,27 @@
 #include <vector>
 #include <unistd.h>
 #include <iostream>
+#include <sys/stat.h> 
+#include <sys/types.h> 
+#include <fcntl.h>
 #include "global.h"
 
 using namespace std;
 
 void handlePipe(){
-   if (pipe(fd) < 0){
-       cerr << "pipe error" << endl;
-   }
+    mkfifo(myfifo.c_str(),0666);
 }
 void leftPipe(){
-    close(fd[0]); 
-    dup2(fd[1], STDOUT_FILENO);
-    close(fd[1]); 
+    int fd = open(myfifo.c_str(),O_WRONLY);
+    dup2(fd,STDOUT_FILENO);
+    close(fd);
+
 }
 
 
 void rightPipe(){
-    close(fd[1]); // child won’t write
-    dup2(fd[0], STDIN_FILENO); // stdin = fd[0]
-    close(fd[0]); // stdin is still open 
+    int fd = open(myfifo.c_str(),O_RDONLY);
+    dup2(fd,STDIN_FILENO);
+    close(fd);
+
 }

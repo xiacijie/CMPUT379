@@ -7,5 +7,6 @@
 using namespace std;
 
 int route(vector<string> words, bool isBackgroundJob);
+void pipeRoute(vector<string> words1, vector<string> words2);
 
 #endif
