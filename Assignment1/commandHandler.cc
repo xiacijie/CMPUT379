@@ -9,8 +9,6 @@
 #include "util.h"
 #include "backgroundHandler.h"
 
-
-
 #define BUFFER_SIZE 1024
 
 using namespace std;
