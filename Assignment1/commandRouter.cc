@@ -55,7 +55,7 @@ int route(vector<string> words, bool isBackgroundJob) {
         if (pid > 0) { // parent process
             processPool[pid]  = true;
             if (isBackgroundJob){
-                hideOutput();
+                 cout << "PID " << pid << " is running in the background" <<endl;
             }
             else{
                 waitpid(pid,NULL,0);
@@ -63,6 +63,10 @@ int route(vector<string> words, bool isBackgroundJob) {
             }
         }
         else { // child process
+
+            if (isBackgroundJob){
+                hideOutput();
+            }
             cmdExternal(words);
         }
         
@@ -87,14 +91,12 @@ void pipeRoute(vector<string> words1, vector<string> words2){
         
     }
     else { //child
-
-        pid_t pid2 = fork();
-
         int fd[2];
-
         if (pipe(fd) < 0){
             cerr << "Pipe error!" <<endl;
         }
+        pid_t pid2 = fork();
+
         if (pid2 < 0){
             cerr << "Error in forking process" << endl;
         }

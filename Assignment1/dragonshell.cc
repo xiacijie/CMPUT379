@@ -13,7 +13,7 @@
 #include "global.h"
 #include "redirectionHandler.h"
 #include "signalHandler.h"
-#include "pipeHandler.h"
+
 
 #define BUFFER_SIZE 1024
 using namespace std;
@@ -136,9 +136,7 @@ int main(int argc, char **argv) {
             return 0;
           }
         }
-
     }
-
   }
 
   return 0;
