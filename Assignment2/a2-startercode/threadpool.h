@@ -3,6 +3,10 @@
 #include <pthread.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*thread_func_t)(void *arg);
 
 typedef struct ThreadPool_work_t {
@@ -63,4 +67,9 @@ ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp);
 *     tp - The ThreadPool Object this thread belongs to
 */
 void *Thread_run(ThreadPool_t *tp);
+
+
+#ifdef __cplusplus
+}
+#endif
 #endif
