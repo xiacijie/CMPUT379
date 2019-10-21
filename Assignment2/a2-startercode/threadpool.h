@@ -1,11 +1,14 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 #include <pthread.h>
-#include <stdbool.h>
+#include <stdlib.h>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+using namespace std;
 
 typedef void (*thread_func_t)(void *arg);
 
@@ -17,10 +20,15 @@ typedef struct ThreadPool_work_t {
 
 typedef struct {
     // TODO: Add members here
+    vector<ThreadPool_work_t> queue;
+
 } ThreadPool_work_queue_t;
 
 typedef struct {
     // TODO: Add members here
+    vector<pthread_t> workers;
+    pthread_mutex_t lock;
+    ThreadPool_work_t workQueue;
 } ThreadPool_t;
 
 
