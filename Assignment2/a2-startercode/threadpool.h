@@ -26,8 +26,13 @@ typedef struct {
 
 typedef struct {
     // TODO: Add members here
-    vector<pthread_t> workers;
+    vector<pthread_t> idleWorkers;
+    vector<pthread_t> busyWorkers;
+    
+    int num;
+    int availableWorkers;
     pthread_mutex_t lock;
+    pthread_cond_t condition;
     ThreadPool_work_t workQueue;
 } ThreadPool_t;
 

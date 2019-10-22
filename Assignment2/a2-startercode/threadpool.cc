@@ -12,12 +12,13 @@ ThreadPool_t *ThreadPool_create(int num) {
         exit(1);
     }
 
-    for (u_int32_t i = 0 ; i < num ; i ++ ){
+    for (int i = 0 ; i < num ; i ++ ){
         pthread_t tid;
-        newThreadPool->workers.push_back(tid);
+        newThreadPool->idleWorkers.push_back(tid);
     }
 
     newThreadPool->lock = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_init(&newThreadPool->condition, NULL);
 
     return newThreadPool;
 }
@@ -29,6 +30,12 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
 
 
 bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
+    pthread_mutex_lock(&tp->lock);
+
+    ThreadPool_work_t work = {func, arg};
+
+
+    pthread_mutex_unlock(&tp->lock);
     
 }
 
