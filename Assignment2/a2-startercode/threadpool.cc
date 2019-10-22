@@ -13,11 +13,15 @@ ThreadPool_t *ThreadPool_create(int num) {
     }
 
     pthread_mutex_init(&newThreadPool->lock, NULL);
-    pthread_cond_init(&newThreadPool->condition, NULL);
+    pthread_cond_init(&newThreadPool->runningCondition, NULL);
+    pthread_cond_init(&newThreadPool->closingCondition, NULL);
+
+    newThreadPool->closing = false;
 
     /*** create #num worker threads ***/
     for (int i = 0; i < num; i ++) {
         pthread_t tid;
+        newThreadPool->threads.push_back(tid);
         pthread_create(&tid, NULL, Thread_run, newThreadPool);
     }
 
@@ -30,26 +34,41 @@ void *Thread_run(void* tp) {
     
     while (true) {
         
-        //pthread_mutex_lock(&threadPool->lock);
+        if (threadPool->closing == true){
+            //printf("exit\n");
+            break;
+        }    
+
         
-        while (threadPool->workQueue.queue.size()==0){ // work queue is empty, waiting for ThreadPool_add_work to add work
-            
-            pthread_cond_wait(&threadPool->condition, &threadPool->lock);
-        }
+
         
         ThreadPool_work_t work = ThreadPool_get_work(threadPool);
         printf("Getting a work!!!\n");
 
 
 
-
-        //pthread_mutex_unlock(&threadPool->lock);
     }
+    return NULL;
 }
 
 void ThreadPool_destroy(ThreadPool_t *tp) {
+    // pthread_mutex_lock(&tp->lock);
+
+    // while (tp->workQueue.queue.size() != 0) {
+    //     pthread_cond_wait(&tp->closingCondition, &tp->lock);
+    // }
+
+    tp->closing = true;
+
+    // pthread_mutex_unlock(&tp->lock);
+
+    for (pthread_t thread : tp->threads) {
+        pthread_join(thread,NULL);
+    }
+    
     pthread_mutex_destroy(&tp->lock);
-    pthread_cond_destroy(&tp->condition);
+    pthread_cond_destroy(&tp->runningCondition);
+    pthread_cond_destroy(&tp->closingCondition);
     free(tp);
 }
 
@@ -60,7 +79,7 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
     ThreadPool_work_t work = {func, arg};
 
     tp->workQueue.queue.push_back(work);
-    pthread_cond_signal(&tp->condition); //signal the sleeping thread waiting for work
+    pthread_cond_signal(&tp->runningCondition); //signal the sleeping thread waiting for work
 
     pthread_mutex_unlock(&tp->lock);
     
@@ -70,8 +89,15 @@ ThreadPool_work_t ThreadPool_get_work(ThreadPool_t *tp){
 
     pthread_mutex_lock(&tp->lock);
 
+    while (tp->workQueue.queue.size()==0){ // work queue is empty, waiting for ThreadPool_add_work to add work
+            
+        pthread_cond_wait(&tp->runningCondition, &tp->lock);
+    }
+
     ThreadPool_work_t work = tp->workQueue.queue.back();
     tp->workQueue.queue.pop_back();
+
+    pthread_cond_signal(&tp->closingCondition);
 
     pthread_mutex_unlock(&tp->lock);
 
