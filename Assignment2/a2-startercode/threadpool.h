@@ -28,7 +28,9 @@ typedef struct {
     // TODO: Add members here
     bool closing;
     vector<pthread_t> threads;
-    pthread_mutex_t lock;
+    int runningThreadsCounter;
+    pthread_mutex_t queueLock;
+    pthread_mutex_t counterLock;
     pthread_cond_t runningCondition;
     pthread_cond_t closingCondition;
     ThreadPool_work_queue_t workQueue;
