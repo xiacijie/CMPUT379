@@ -26,14 +26,10 @@ typedef struct {
 
 typedef struct {
     // TODO: Add members here
-    vector<pthread_t> idleWorkers;
-    vector<pthread_t> busyWorkers;
-    
-    int num;
-    int availableWorkers;
     pthread_mutex_t lock;
     pthread_cond_t condition;
-    ThreadPool_work_t workQueue;
+    ThreadPool_work_queue_t workQueue;
+
 } ThreadPool_t;
 
 
@@ -72,14 +68,14 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg);
 * Return:
 *     ThreadPool_work_t* - The next task to run
 */
-ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp);
+ThreadPool_work_t ThreadPool_get_work(ThreadPool_t *tp);
 
 /**
 * Run the next task from the task queue
 * Parameters:
 *     tp - The ThreadPool Object this thread belongs to
 */
-void *Thread_run(ThreadPool_t *tp);
+void *Thread_run(void *tp);
 
 
 #ifdef __cplusplus
