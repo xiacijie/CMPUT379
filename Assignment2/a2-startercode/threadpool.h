@@ -20,7 +20,7 @@ typedef struct ThreadPool_work_t {
 
 typedef struct {
     // TODO: Add members here
-    vector<ThreadPool_work_t> queue;
+    vector<ThreadPool_work_t*> queue;
 
 } ThreadPool_work_queue_t;
 
@@ -71,7 +71,7 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg);
 * Return:
 *     ThreadPool_work_t* - The next task to run
 */
-ThreadPool_work_t ThreadPool_get_work(ThreadPool_t *tp);
+ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp);
 
 /**
 * Run the next task from the task queue
