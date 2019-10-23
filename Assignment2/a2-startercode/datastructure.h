@@ -17,7 +17,7 @@ typedef struct
 
 } DataStructure;
 
-/*** Create the data structure and return its pointer ***/
+/*** Create the shared data structure and return its pointer ***/
 DataStructure * DataStructure_create();
 
 /*** insert data into shared data structure ***/
@@ -26,7 +26,7 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
 /*** return the next key to be processes, if none, return NULL ***/
 char* DataStructure_peekNext(DataStructure *ds, long partition);
 
-/*** get the next data by key ***/
+/*** get the next data by key and pop out ***/
 Data* DataStructure_getData(DataStructure* ds, long partition, char* key);
 
 

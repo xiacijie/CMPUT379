@@ -1,17 +1,29 @@
 #include "mapreduce.h"
 #include "threadpool.h"
 #include "datastructure.h"
+#include <vector>
 #include <iostream>
+#include <algorithm>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 using namespace std;
+
+struct file {
+    char* filename;
+    long long filesize;
+};
 
 /*** Global variables ***/
 int M;
 int R;
 Reducer reducer;
 DataStructure *ds;
+
+bool compare(struct file &f1, struct file &f2){
+    return f1.filesize > f2.filesize;
+}
 
 void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer concate, int num_reducers){
     
@@ -20,11 +32,32 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
     R = num_reducers;
     reducer = concate;
     ds = DataStructure_create();
-    
+
+    //https://stackoverflow.com/questions/9367528/getting-the-length-of-a-file-using-stat-in-c
+
+    /*** sort the files by size ***/ //https://stackoverflow.com/questions/4892680/sorting-a-vector-of-structs
+    vector<struct file> files;
+
+    for (int i=0; i < num_files; i ++){
+        struct stat st;
+        
+        if (stat(filenames[i], &st)){ // error in get the stat of the file
+            continue;
+        }
+
+        struct file f = {filenames[i], st.st_size};
+        files.push_back(f);
+    }
+
+    sort(files.begin(),files.end(),compare);
+
+
     ThreadPool_t *mappers = ThreadPool_create(num_mappers);
 
-    for (int i = 0 ; i < num_files; i ++){
-        if (ThreadPool_add_work(mappers, (thread_func_t) map, filenames[i]) == false){
+    for (unsigned int i = 0 ; i < files.size(); i ++){
+
+        if (ThreadPool_add_work(mappers, (thread_func_t) map, files[i].filename) == false){
+            
             cerr << "Fail to add work!" << endl;
             exit(1);
         }
@@ -50,7 +83,7 @@ void MR_Emit(char *key, char *value){
 }
 
 unsigned long MR_Partition(char *key, int num_partitions){
-
+    
     unsigned long hash = 5381;
     int c;
     while ((c = *key++) != '\0'){
@@ -62,10 +95,6 @@ unsigned long MR_Partition(char *key, int num_partitions){
 void MR_ProcessPartition(int* partition_number){
     char *key;
     
-    // for (unsigned int i = 0 ; i < ds->hashTable[*partition_number].size(); i ++){
-    //     printf("%s | %s\n", ds->hashTable[*partition_number][i]->key,ds->hashTable[*partition_number][i]->value);
-    // }
-    
     while ((key = DataStructure_peekNext(ds, *partition_number)) != NULL ){
         reducer(key,*partition_number);
         delete key;
@@ -75,6 +104,7 @@ void MR_ProcessPartition(int* partition_number){
     delete partition_number;
 }
 
+/*** WARNING: whoever uses this method should free the memory of the pointer it returns ***/
 char *MR_GetNext(char *key, int partition_number){
     
     if (key == NULL){

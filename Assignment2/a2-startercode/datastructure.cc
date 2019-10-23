@@ -65,6 +65,7 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     return data;
 }
 
+/*** peek the next data to be processed ***/
 char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
     pthread_mutex_lock(&ds->lock);

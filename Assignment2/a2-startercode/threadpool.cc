@@ -12,11 +12,11 @@ ThreadPool_t *ThreadPool_create(int num) {
         exit(1);
     }
 
-    pthread_mutex_init(&newThreadPool->queueLock, NULL);
-    pthread_mutex_init(&newThreadPool->counterLock, NULL);
+    pthread_mutex_init(&newThreadPool->queueLock, NULL); // the lock for the work queue
+    pthread_mutex_init(&newThreadPool->counterLock, NULL); // the lock for the counter
     
-    pthread_cond_init(&newThreadPool->workingCondition, NULL);
-    pthread_cond_init(&newThreadPool->stopingCondition, NULL);
+    pthread_cond_init(&newThreadPool->workingCondition, NULL); // condition indicates if the threadpool should start picking up works
+    pthread_cond_init(&newThreadPool->stopingCondition, NULL); // condition indicates if the threadpool should stop
 
 
 
@@ -38,24 +38,20 @@ ThreadPool_t *ThreadPool_create(int num) {
 void *Thread_run(void* tp) {
     ThreadPool_t *threadPool = (ThreadPool_t *)tp;
     
-    
     while (true) {
         
-        ThreadPool_work_t* work = ThreadPool_get_work(threadPool);
+        ThreadPool_work_t* work = ThreadPool_get_work(threadPool); // pick up the work from queue, if empty, block until there is work
         if (work != NULL){
-            //printf("processing a work...\n");
-
+            
             pthread_mutex_lock(&threadPool->counterLock);
-                threadPool->counter += 1;
+                threadPool->counter += 1; 
             pthread_mutex_unlock(&threadPool->counterLock);
 
-            work->func(work->arg);
-
-            //printf("Finish a work\n");
+            work->func(work->arg); // processing the work
 
             pthread_mutex_lock(&threadPool->counterLock);
                 threadPool->counter -= 1;
-                pthread_cond_signal(&threadPool->stopingCondition);
+                pthread_cond_signal(&threadPool->stopingCondition); // signal the blocked destroy threadpool function 
             pthread_mutex_unlock(&threadPool->counterLock);
             
             delete work;
@@ -75,14 +71,13 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
     // block until the queue is empty
     pthread_mutex_lock(&tp->queueLock);
 
-        while (tp->workQueue.workQueue.size() != 0){ 
+        while (tp->workQueue.workQueue.size() != 0) { 
             pthread_cond_wait(&tp->stopingCondition, &tp->queueLock);
         }
 
     pthread_mutex_unlock(&tp->queueLock);
-    //printf("-----queue is empty\n");
 
-    // block until all ongoing tasks are done
+    // block until all ongoing tasks are done( counter is 0)
     pthread_mutex_lock(&tp->counterLock);
 
         while(tp->counter != 0){
@@ -90,15 +85,17 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
         }
 
     pthread_mutex_unlock(&tp->counterLock);
-    //printf("-----counter is 0\n");
 
     tp->closing = true;
     pthread_cond_broadcast(&tp->workingCondition);
 
+
+    //join all the threads
     for (unsigned int i = 0 ; i < tp->threads.size(); i++){
         pthread_join(tp->threads[i],NULL);
     }
 
+    //destory threads and condition variables
     pthread_mutex_destroy(&tp->queueLock);
     pthread_mutex_destroy(&tp->counterLock);
     pthread_cond_destroy(&tp->workingCondition);
