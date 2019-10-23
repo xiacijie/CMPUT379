@@ -1,8 +1,8 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 #include <pthread.h>
-#include <stdlib.h>
 #include <vector>
+#include <queue>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,7 +20,7 @@ typedef struct ThreadPool_work_t {
 
 typedef struct {
     // TODO: Add members here
-    vector<ThreadPool_work_t*> queue;
+    queue<ThreadPool_work_t*> workQueue;
 
 } ThreadPool_work_queue_t;
 
@@ -31,8 +31,8 @@ typedef struct {
     int counter;
     pthread_mutex_t queueLock;
     pthread_mutex_t counterLock;
-    pthread_cond_t runningCondition;
-    pthread_cond_t closingCondition;
+    pthread_cond_t workingCondition;
+    pthread_cond_t stopingCondition;
     ThreadPool_work_queue_t workQueue;
 
 } ThreadPool_t;

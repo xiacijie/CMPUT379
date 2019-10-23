@@ -8,6 +8,7 @@
 #include <string.h>
 
 void Map(char *file_name) {
+    printf("%s\n",file_name);
     FILE *fp = fopen(file_name, "r");
     assert(fp != NULL);
     char *line = NULL;
@@ -15,7 +16,7 @@ void Map(char *file_name) {
     while (getline(&line, &size, fp) != -1) {
         char *token, *dummy = line;
         while ((token = strsep(&dummy, " \t\n\r")) != NULL)
-            MR_Emit(token, "1");
+            MR_Emit(token, (char*)"1");
     }
     free(line);
     fclose(fp);
