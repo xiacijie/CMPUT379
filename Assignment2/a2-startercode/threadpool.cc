@@ -3,7 +3,7 @@
 
 using namespace std;
 
-
+// threads will start running after this function is called
 ThreadPool_t *ThreadPool_create(int num) {
     ThreadPool_t *newThreadPool = (ThreadPool_t *)malloc(sizeof(ThreadPool_t));
 
@@ -14,12 +14,12 @@ ThreadPool_t *ThreadPool_create(int num) {
 
     pthread_mutex_init(&newThreadPool->queueLock, NULL);
     pthread_mutex_init(&newThreadPool->counterLock, NULL);
+    
     pthread_cond_init(&newThreadPool->runningCondition, NULL);
     pthread_cond_init(&newThreadPool->closingCondition, NULL);
 
-    newThreadPool->closing = false;
-    newThreadPool->runningThreadsCounter =0;
-
+    newThreadPool->closing = false; // indicates whether destroy threadpool is called
+    newThreadPool->counter = 0;
     /*** create #num worker threads ***/
     for (int i = 0; i < num; i ++) {
         pthread_t tid;
@@ -30,6 +30,7 @@ ThreadPool_t *ThreadPool_create(int num) {
     return newThreadPool;
 }
 
+//running the thread infinitely until threadpool destroy function is called
 void *Thread_run(void* tp) {
     ThreadPool_t *threadPool = (ThreadPool_t *)tp;
     
@@ -38,14 +39,27 @@ void *Thread_run(void* tp) {
         
         ThreadPool_work_t* work = ThreadPool_get_work(threadPool);
         if (work != NULL){
-            printf("get a work\n");
+            printf("processing a work...\n");
+
+            pthread_mutex_lock(&threadPool->counterLock);
+                threadPool->counter += 1;
+            pthread_mutex_unlock(&threadPool->counterLock);
+
             work->func(work->arg);
-            //finish the work, signal closing condition
-            pthread_cond_signal(&threadPool->closingCondition);
+
+            printf("Finish a work\n");
+
+            pthread_mutex_lock(&threadPool->counterLock);
+                threadPool->counter -= 1;
+                pthread_cond_signal(&threadPool->closingCondition);
+            pthread_mutex_unlock(&threadPool->counterLock);
+            
             free(work);
         }
 
-        if (threadPool->closing == true){
+        if (threadPool->closing == true){ // if the threadpool destroy is called, quit this thread. 
+            printf("quitting the thread...\n");
+            pthread_cond_signal(&threadPool->closingCondition); //finish the work, signal closing condition
             break;
         } 
 
@@ -58,23 +72,30 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
 
     pthread_mutex_lock(&tp->queueLock);
 
-    while (tp->workQueue.queue.size() != 0){
-        pthread_cond_wait(&tp->closingCondition,&tp->queueLock);
+    while (tp->workQueue.queue.size() != 0){ // block until the queue is empty
+        pthread_cond_wait(&tp->closingCondition, &tp->queueLock);
     }
 
-    tp->closing = true;
+    
     
     pthread_mutex_unlock(&tp->queueLock);
+    printf("-----queue is empty\n");
 
-    pthread_cond_broadcast(&tp->runningCondition);
+    // block until all ongoing tasks are done
+    pthread_mutex_lock(&tp->counterLock);
 
-    for (pthread_t thread : tp->threads) {
-        pthread_join(thread,NULL);
-
+    while(tp->counter != 0){
+        pthread_cond_wait(&tp->closingCondition,&tp->counterLock);
     }
+
+    pthread_mutex_unlock(&tp->counterLock);
+
+    tp->closing = true;
+    pthread_cond_signal(&tp->runningCondition);
 
 
     pthread_mutex_destroy(&tp->queueLock);
+    pthread_mutex_destroy(&tp->counterLock);
     pthread_cond_destroy(&tp->runningCondition);
     pthread_cond_destroy(&tp->closingCondition);
     free(tp);
@@ -95,7 +116,8 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
     work->arg = arg;
 
     tp->workQueue.queue.push_back(work);
-    pthread_cond_broadcast(&tp->runningCondition); //signal the sleeping thread waiting for work
+    printf("adding work...\n");
+    pthread_cond_signal(&tp->runningCondition); //signal the sleeping thread waiting for work
 
     pthread_mutex_unlock(&tp->queueLock);
     return true;
@@ -103,14 +125,14 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
 }
 
 ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp){
-    printf("get work\n");
+    
     pthread_mutex_lock(&tp->queueLock);
 
     while (tp->workQueue.queue.size()==0 && tp->closing == false){ // work queue is empty, waiting for ThreadPool_add_work to add work
         pthread_cond_wait(&tp->runningCondition, &tp->queueLock);
     }
 
-    if (tp->closing == true){   // if ThreadPool_destroy() is called, release the lock
+    if (tp->workQueue.queue.size()==0 && tp->closing == true){   // if ThreadPool_destroy() is called, release the lock
         pthread_mutex_unlock(&tp->queueLock);
         return NULL;
     }
@@ -118,6 +140,7 @@ ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp){
     ThreadPool_work_t* work = tp->workQueue.queue.back();
     tp->workQueue.queue.pop_back();
 
+    pthread_cond_signal(&tp->closingCondition);
     pthread_mutex_unlock(&tp->queueLock);
 
     return work;

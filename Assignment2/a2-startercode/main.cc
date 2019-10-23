@@ -11,17 +11,21 @@ void* foo(void *arg){
 }
 
 int main(){
-    ThreadPool_t *tp = ThreadPool_create(10);
+    ThreadPool_t *tp = ThreadPool_create(1);
     
-    int i = 1;
+    int i = 3;
     int j = 2;
-    int k = 3;
+    //int k = 3;
     ThreadPool_add_work(tp, (thread_func_t)foo, &i);
     ThreadPool_add_work(tp, (thread_func_t)foo, &j);
-    ThreadPool_add_work(tp, (thread_func_t)foo, &k);
-    ThreadPool_add_work(tp, (thread_func_t)foo, &i);
     ThreadPool_add_work(tp, (thread_func_t)foo, &j);
-    ThreadPool_add_work(tp, (thread_func_t)foo, &k);
+    ThreadPool_add_work(tp, (thread_func_t)foo, &j);
+    ThreadPool_add_work(tp, (thread_func_t)foo, &j);
+    ThreadPool_add_work(tp, (thread_func_t)foo, &j);
+    // ThreadPool_add_work(tp, (thread_func_t)foo, &k);
+    // ThreadPool_add_work(tp, (thread_func_t)foo, &i);
+    // ThreadPool_add_work(tp, (thread_func_t)foo, &j);
+    // ThreadPool_add_work(tp, (thread_func_t)foo, &k);
 
 
     ThreadPool_destroy(tp);
