@@ -44,7 +44,7 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
 }
 
 void MR_Emit(char *key, char *value){
-   
+    printf("EMIR %s : %s\n",key,value);
     DataStructure_addData(ds,MR_Partition(key, R),key,value);
 }
 
@@ -59,19 +59,23 @@ unsigned long MR_Partition(char *key, int num_partitions){
 }
 
 void MR_ProcessPartition(int* partition_number){
+    char *key;
+    printf("process partition\n");
+    while ((key = DataStructure_peekNext(ds, *partition_number)) != NULL ){
+        reducer(key,*partition_number);
+    }
     
-    char* key = DataStructure_peekNext(ds, *partition_number); //caution: it can be NULL
-    reducer(key,*partition_number);
     delete partition_number;
 }
 
 char *MR_GetNext(char *key, int partition_number){
+    printf("Get next\n");
     if (key == NULL){
         return NULL;
     }
 
     Data *data =  DataStructure_getData(ds, partition_number, key);
-    
+
     char* value = NULL;
     if (data != NULL){
         value = data->value;
