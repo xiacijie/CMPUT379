@@ -40,3 +40,9 @@ should: 5000
 each: 5000
 for: 5000
 should: 5000
+each: 1375
+for: 1361
+should: 1324
+each: 265
+for: 207
+should: 231

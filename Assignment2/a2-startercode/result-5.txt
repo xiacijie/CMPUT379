@@ -42,3 +42,10 @@ word: 5000
 This: 5000
 exactly: 5000
 word: 5000
+This: 1350
+exactly: 1379
+how: 2
+word: 1394
+This: 248
+exactly: 249
+word: 267
