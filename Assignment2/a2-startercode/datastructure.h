@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include <vector>
+#include <map>
 #include <pthread.h>
 
 using namespace std;
@@ -11,7 +12,7 @@ typedef struct {
 
 typedef struct
 {
-    unordered_map<int, vector<Data>> hashTable;
+    unordered_map<long, vector<Data*>> hashTable;
     pthread_mutex_t lock;
 
 } DataStructure;
@@ -20,10 +21,10 @@ typedef struct
 DataStructure * DataStructure_create();
 
 /*** insert data into shared data structure ***/
-void DataStructure_addData(long partition, char* key, char* value);
+void DataStructure_addData(DataStructure* ds, long partition, char* key, char* value);
 
 /*** get the next data ***/
-Data DataStructure_getData(long partition);
+Data* DataStructure_getData(DataStructure* ds, long partition);
 
 
 /*** free the memory ***/
