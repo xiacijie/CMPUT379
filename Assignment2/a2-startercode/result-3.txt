@@ -1,0 +1,12 @@
+input: 444
+mapreduce: 425
+test: 447
+times: 432
+input: 5000
+mapreduce: 5000
+test: 5000
+times: 5000
+input: 5000
+mapreduce: 5000
+test: 5000
+times: 5000

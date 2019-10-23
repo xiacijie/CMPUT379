@@ -10,9 +10,12 @@ DataStructure * DataStructure_create(){
 
 /*** insert data into shared data structure ***/
 void DataStructure_addData(DataStructure* ds, long partition, char* key, char* value){
+    
     Data* newData = new Data();
-    newData->key = key;
-    newData->value = value;
+    newData->key = new char[128];
+    newData->value = new char[128];
+    strcpy(newData->key, key);
+    strcpy(newData->value, value);
 
     pthread_mutex_lock(&ds->lock);
         auto it = ds->hashTable.find(partition);
@@ -65,13 +68,14 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
 char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
     pthread_mutex_lock(&ds->lock);
+        
         if (ds->hashTable[partition].size() != 0){
-            key = ds->hashTable[partition][0]->key;
+            key = new char[128];
+            strcpy(key,ds->hashTable[partition][0]->key);
         }
     pthread_mutex_unlock(&ds->lock);
 
     return key;
-
 }
 
 

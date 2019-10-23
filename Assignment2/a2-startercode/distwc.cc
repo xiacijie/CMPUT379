@@ -26,8 +26,11 @@ void Reduce(char *key, int partition_number) {
     
     int count = 0;
     char *value, name[100];
-    while ((value = MR_GetNext(key, partition_number)) != NULL)
+    while ((value = MR_GetNext(key, partition_number)) != NULL){
+        delete value;
         count++;
+    }
+        
     sprintf(name, "result-%d.txt", partition_number);
     FILE *fp = fopen(name, "a");
     printf("%s: %d\n", key, count);
@@ -36,5 +39,5 @@ void Reduce(char *key, int partition_number) {
 }
 
 int main(int argc, char *argv[]) {
-    MR_Run(argc - 1, &(argv[1]), Map, 10, Reduce, 1);
+    MR_Run(argc - 1, &(argv[1]), Map, 10, Reduce, 10);
 }

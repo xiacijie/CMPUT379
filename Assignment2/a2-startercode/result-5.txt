@@ -1,0 +1,9 @@
+This: 418
+exactly: 469
+word: 462
+This: 5000
+exactly: 5000
+word: 5000
+This: 5000
+exactly: 5000
+word: 5000
