@@ -8,7 +8,7 @@
 #include <string.h>
 
 void Map(char *file_name) {
-    printf("%s\n",file_name);
+    
     FILE *fp = fopen(file_name, "r");
     assert(fp != NULL);
     char *line = NULL;

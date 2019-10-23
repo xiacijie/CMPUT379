@@ -23,8 +23,11 @@ DataStructure * DataStructure_create();
 /*** insert data into shared data structure ***/
 void DataStructure_addData(DataStructure* ds, long partition, char* key, char* value);
 
-/*** get the next data ***/
-Data* DataStructure_getData(DataStructure* ds, long partition);
+/*** return the next key to be processes, if none, return NULL ***/
+char* DataStructure_peekNext(DataStructure *ds, long partition);
+
+/*** get the next data by key ***/
+Data* DataStructure_getData(DataStructure* ds, long partition, char* key);
 
 
 /*** free the memory ***/

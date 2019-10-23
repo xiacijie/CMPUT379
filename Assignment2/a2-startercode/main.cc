@@ -2,23 +2,17 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
+#include <vector>
 
-void* foo(void *arg){
-    sleep(*((int *) arg));
-    printf("%d\n", *((int *) arg));
-    return NULL;
-    
-}
+using namespace std;
+
 
 int main(){
-    ThreadPool_t *tp = ThreadPool_create(5);
-    
-    int i = 1;
-    int j = 2;
-    int k = 3;
-    ThreadPool_add_work(tp, (thread_func_t)foo, &i);
-    ThreadPool_add_work(tp, (thread_func_t)foo, &j);
-    ThreadPool_add_work(tp, (thread_func_t)foo, &k);
-    ThreadPool_destroy(tp);
+    vector<int> v;
+    v.push_back(1);
+    v.insert(v.begin(),2);
+
+    printf("%d",v[0]);
     return 0;
 }

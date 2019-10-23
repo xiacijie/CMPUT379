@@ -1,4 +1,5 @@
 #include "datastructure.h"
+#include <string.h>
 
 /*** Create the data structure and return its pointer ***/
 DataStructure * DataStructure_create(){
@@ -9,27 +10,68 @@ DataStructure * DataStructure_create(){
 
 /*** insert data into shared data structure ***/
 void DataStructure_addData(DataStructure* ds, long partition, char* key, char* value){
-    Data* data = new Data();
-    data->key = key;
-    data->value = value;
+    Data* newData = new Data();
+    newData->key = key;
+    newData->value = value;
 
     pthread_mutex_lock(&ds->lock);
-        ds->hashTable[partition].push_back(data);
+        auto it = ds->hashTable.find(partition);
+        if (it == ds->hashTable.end()){
+            
+            ds->hashTable[partition].push_back(newData);
+        }
+        else{
+            
+            /*** insert the data in acsending order ***/
+            vector<Data*> *v = &ds->hashTable[partition];
+            vector<Data*>::iterator it = v->begin();
+            
+            while (it != v->end()){
+                
+                Data* data = *it;
+                if (strcmp(data->key, key )<= 0){
+                    it++;
+                }
+                else{
+                    v->insert(it,newData);
+                    break;
+                }
+            }
+            if (it == v->end()){
+                v->insert(it, newData);
+            }
+
+        }
+        
     pthread_mutex_unlock(&ds->lock);
 }
 
-/*** get the next data ***/
-Data* DataStructure_getData(DataStructure *ds, long partition){
+/*** get the next data and remove it from list ***/
+Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     
     Data* data = NULL;
     pthread_mutex_lock(&ds->lock);
-        if (ds->hashTable[partition].size() > 0){
-            data = ds->hashTable[partition].back();
-            ds->hashTable[partition].pop_back();
+        
+        if (ds->hashTable[partition].size() > 0 && strcmp(ds->hashTable[partition][0]->key, key) == 0){
+            data = ds->hashTable[partition][0];
+            ds->hashTable[partition].erase(ds->hashTable[partition].begin()); //remove the data
         }
+        
     pthread_mutex_unlock(&ds->lock);
     
     return data;
+}
+
+char *DataStructure_peekNext(DataStructure*ds, long partition){
+    char* key = NULL;
+    pthread_mutex_lock(&ds->lock);
+        if (ds->hashTable[partition].size() != 0){
+            key = ds->hashTable[partition][0]->key;
+        }
+    pthread_mutex_unlock(&ds->lock);
+
+    return key;
+
 }
 
 
