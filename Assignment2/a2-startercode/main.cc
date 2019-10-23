@@ -11,7 +11,7 @@ void* foo(void *arg){
 }
 
 int main(){
-    ThreadPool_t *tp = ThreadPool_create(1);
+    ThreadPool_t *tp = ThreadPool_create(3);
     
     int i = 3;
     int j = 2;
@@ -26,6 +26,7 @@ int main(){
     // ThreadPool_add_work(tp, (thread_func_t)foo, &i);
     // ThreadPool_add_work(tp, (thread_func_t)foo, &j);
     // ThreadPool_add_work(tp, (thread_func_t)foo, &k);
+    //sleep(3);
 
 
     ThreadPool_destroy(tp);

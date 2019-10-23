@@ -59,7 +59,7 @@ void *Thread_run(void* tp) {
 
         if (threadPool->closing == true){ // if the threadpool destroy is called, quit this thread. 
             printf("quitting the thread...\n");
-            pthread_cond_signal(&threadPool->closingCondition); //finish the work, signal closing condition
+            //pthread_cond_signal(&threadPool->closingCondition); //finish the work, signal closing condition
             break;
         } 
 
@@ -89,9 +89,10 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
     }
 
     pthread_mutex_unlock(&tp->counterLock);
+    printf("-----counter is 0\n");
 
     tp->closing = true;
-    pthread_cond_signal(&tp->runningCondition);
+    pthread_cond_broadcast(&tp->runningCondition);
 
 
     pthread_mutex_destroy(&tp->queueLock);
@@ -116,8 +117,8 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
     work->arg = arg;
 
     tp->workQueue.queue.push_back(work);
-    printf("adding work...\n");
-    pthread_cond_signal(&tp->runningCondition); //signal the sleeping thread waiting for work
+    
+    pthread_cond_broadcast(&tp->runningCondition); //signal the sleeping thread waiting for work
 
     pthread_mutex_unlock(&tp->queueLock);
     return true;
@@ -129,6 +130,7 @@ ThreadPool_work_t *ThreadPool_get_work(ThreadPool_t *tp){
     pthread_mutex_lock(&tp->queueLock);
 
     while (tp->workQueue.queue.size()==0 && tp->closing == false){ // work queue is empty, waiting for ThreadPool_add_work to add work
+        
         pthread_cond_wait(&tp->runningCondition, &tp->queueLock);
     }
 
