@@ -33,9 +33,8 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
     reducer = concate;
     ds = DataStructure_create();
 
-    //https://stackoverflow.com/questions/9367528/getting-the-length-of-a-file-using-stat-in-c
 
-    /*** sort the files by size ***/ //https://stackoverflow.com/questions/4892680/sorting-a-vector-of-structs
+    /*** sort the files by size ***/ 
     vector<struct file> files;
 
     for (int i=0; i < num_files; i ++){
@@ -83,7 +82,7 @@ void MR_Emit(char *key, char *value){
 }
 
 unsigned long MR_Partition(char *key, int num_partitions){
-    
+
     unsigned long hash = 5381;
     int c;
     while ((c = *key++) != '\0'){
