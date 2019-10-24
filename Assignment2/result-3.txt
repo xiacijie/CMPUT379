@@ -2,14 +2,6 @@ input: 5000
 mapreduce: 5000
 test: 5000
 times: 5000
-input: 247
-mapreduce: 220
-test: 252
-times: 224
-input: 247
-mapreduce: 220
-test: 252
-times: 224
 input: 5000
 mapreduce: 5000
 test: 5000

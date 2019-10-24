@@ -1,7 +1,7 @@
 #include "mapreduce.h"
 #include "threadpool.h"
 #include <unordered_map>
-#include <vector>
+#include <list>
 #include <iostream>
 #include <algorithm>
 #include <string.h>
@@ -17,17 +17,28 @@ typedef struct {
     char *value;
 } Data;
 
+typedef struct {
+    pthread_mutex_t lock;
+    list<Data*> l;
+} DataList_t;
+
 typedef struct
 {
-    unordered_map<long, vector<Data*>> hashTable;
-    pthread_mutex_t lock;
+    unordered_map<long, DataList_t> hashTable;
 
 } DataStructure;
 
 /*** Create the data structure and return its pointer ***/
-DataStructure * DataStructure_create(){
+DataStructure * DataStructure_create(int partitions){
     DataStructure *ds = new DataStructure();
-    pthread_mutex_init(&ds->lock,NULL);
+    for (long i = 0 ; i < partitions; i ++){
+        DataList_t datalist;
+
+        ds->hashTable[i] = datalist;
+        pthread_mutex_init(&ds->hashTable[i].lock,NULL); // initialize the lock for every partition
+        
+    }
+    
     return ds;
 }
 
@@ -40,50 +51,50 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
     strcpy(newData->key, key);
     strcpy(newData->value, value);
 
-    pthread_mutex_lock(&ds->lock);
+    pthread_mutex_lock(&ds->hashTable[partition].lock);
         auto it = ds->hashTable.find(partition);
         if (it == ds->hashTable.end()){
             
-            ds->hashTable[partition].push_back(newData);
+            ds->hashTable[partition].l.push_back(newData);
         }
         else{
             
             /*** insert the data in acsending order ***/
-            vector<Data*> *v = &ds->hashTable[partition];
-            vector<Data*>::iterator it = v->begin();
+            list<Data*> *l = &ds->hashTable[partition].l;
+            list<Data*>::iterator it = l->begin();
             
-            while (it != v->end()){
+            while (it != l->end()){
                 
                 Data* data = *it;
                 if (strcmp(data->key, key )<= 0){
                     it++;
                 }
                 else{
-                    v->insert(it,newData);
+                    l->insert(it,newData);
                     break;
                 }
             }
-            if (it == v->end()){
-                v->insert(it, newData);
+            if (it == l->end()){
+                l->insert(it, newData);
             }
 
         }
         
-    pthread_mutex_unlock(&ds->lock);
+    pthread_mutex_unlock(&ds->hashTable[partition].lock);
 }
 
 /*** get the next data and remove it from list ***/
 Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     
     Data* data = NULL;
-    pthread_mutex_lock(&ds->lock);
+    pthread_mutex_lock(&ds->hashTable[partition].lock);
         
-        if (ds->hashTable[partition].size() > 0 && strcmp(ds->hashTable[partition][0]->key, key) == 0){
-            data = ds->hashTable[partition][0];
-            ds->hashTable[partition].erase(ds->hashTable[partition].begin()); //remove the data
+        if (ds->hashTable[partition].l.size() > 0 && strcmp(ds->hashTable[partition].l.front()->key, key) == 0){
+            data = ds->hashTable[partition].l.front();
+            ds->hashTable[partition].l.pop_front(); //remove the data
         }
         
-    pthread_mutex_unlock(&ds->lock);
+    pthread_mutex_unlock(&ds->hashTable[partition].lock);
     
     return data;
 }
@@ -91,13 +102,13 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
 /*** peek the next data to be processed ***/
 char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
-    pthread_mutex_lock(&ds->lock);
+    pthread_mutex_lock(&ds->hashTable[partition].lock);
         
-        if (ds->hashTable[partition].size() != 0){
+        if (ds->hashTable[partition].l.size() != 0){
             key = new char[128];
-            strcpy(key,ds->hashTable[partition][0]->key);
+            strcpy(key,ds->hashTable[partition].l.front()->key);
         }
-    pthread_mutex_unlock(&ds->lock);
+    pthread_mutex_unlock(&ds->hashTable[partition].lock);
 
     return key;
 }
@@ -129,7 +140,7 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
     M = num_mappers;
     R = num_reducers;
     reducer = concate;
-    ds = DataStructure_create();
+    ds = DataStructure_create(num_reducers);
 
 
     /*** sort the files by size ***/ 

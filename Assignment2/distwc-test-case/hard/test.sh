@@ -26,10 +26,10 @@ done
 
 make
 
-echo "First run"
-./distwc 3 3 ${FILES}
-./validation 3 result-0.txt result-1.txt result-2.txt 1-correct_result-0.txt 1-correct_result-1.txt 1-correct_result-2.txt
-make clean-result
+# echo "First run"
+# ./distwc 3 3 ${FILES}
+# ./validation 3 result-0.txt result-1.txt result-2.txt 1-correct_result-0.txt 1-correct_result-1.txt 1-correct_result-2.txt
+# make clean-result
 
 echo "Second run"
 ./distwc 10 6 ${FILES}
