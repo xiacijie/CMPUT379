@@ -1,7 +1,7 @@
 #include "mapreduce.h"
 #include "threadpool.h"
 #include <unordered_map>
-#include <list>
+#include <vector>
 #include <iostream>
 #include <algorithm>
 #include <string.h>
@@ -19,7 +19,7 @@ typedef struct {
 
 typedef struct
 {
-    unordered_map<long, list<Data*>> hashTable;
+    unordered_map<long, vector<Data*>> hashTable;
     pthread_mutex_t lock;
 
 } DataStructure;
@@ -49,22 +49,22 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
         else{
             
             /*** insert the data in acsending order ***/
-            list<Data*> *l = &ds->hashTable[partition];
-            list<Data*>::iterator it = l->begin();
+            vector<Data*> *v = &ds->hashTable[partition];
+            vector<Data*>::iterator it = v->begin();
             
-            while (it != l->end()){
+            while (it != v->end()){
                 
                 Data* data = *it;
                 if (strcmp(data->key, key )<= 0){
                     it++;
                 }
                 else{
-                    l->insert(it,newData);
+                    v->insert(it,newData);
                     break;
                 }
             }
-            if (it == l->end()){
-                l->insert(it, newData);
+            if (it == v->end()){
+                v->insert(it, newData);
             }
 
         }
@@ -78,9 +78,9 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     Data* data = NULL;
     pthread_mutex_lock(&ds->lock);
         
-        if (ds->hashTable[partition].size() > 0 && strcmp(ds->hashTable[partition].front()->key, key) == 0){
-            data = ds->hashTable[partition].front();
-            ds->hashTable[partition].pop_front(); //remove the data
+        if (ds->hashTable[partition].size() > 0 && strcmp(ds->hashTable[partition][0]->key, key) == 0){
+            data = ds->hashTable[partition][0];
+            ds->hashTable[partition].erase(ds->hashTable[partition].begin()); //remove the data
         }
         
     pthread_mutex_unlock(&ds->lock);
@@ -95,7 +95,7 @@ char *DataStructure_peekNext(DataStructure*ds, long partition){
         
         if (ds->hashTable[partition].size() != 0){
             key = new char[128];
-            strcpy(key,ds->hashTable[partition].front()->key);
+            strcpy(key,ds->hashTable[partition][0]->key);
         }
     pthread_mutex_unlock(&ds->lock);
 
