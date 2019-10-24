@@ -1,16 +1,13 @@
-CC:=gcc
-WARN:=-Wall 
-LIB:=-lm -pthread -O3
-CCOPTS:=-std=c99 -ggdb -D_GNU_SOURCE
-TARGET:=distwc
+CC=g++
+CFLAGS = -Wall -Werror -std=c++11 -pthread
+TARGET=distwc
 
 all: threadpool.o mapreduce.o
-
-%.o: %.c
-	$(CC) $(WARN) $(CCOPTS) $< -c $(LIB)
-
 clean-all:
-	rm -rf *.o *.gch $(TARGET)
+	rm *.o
+threadpool.o: threadpool.cc
+	${CC} ${CFLAGS} -c threadpool.cc
+mapreduce.o: mapreduce.cc
+	${CC} ${CFLAGS} -c mapreduce.cc
 
-threadpool.o: threadpool.c threadpool.h
-mapreduce.o: mapreduce.c mapreduce.h threadpool.h
+	

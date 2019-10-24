@@ -6,14 +6,17 @@
 
 void Map(char *file_name) {
   FILE *fp = fopen(file_name, "r");
-  assert(fp != NULL);
+  if (fp == NULL) {
+    printf("Cannot open %s \n", file_name);
+    return;
+  } 
   char *line = NULL;
   size_t size = 0;
   printf("Processing %s\n", file_name);
   while (getline(&line, &size, fp) != -1) {
     char *token, *dummy = line;
     while ((token = strsep(&dummy, " \t\n\r")) != NULL) {
-      MR_Emit(token, "1");
+      MR_Emit(token, (char*)"1");
       
     }
     
