@@ -1,6 +1,8 @@
 CC=g++
 CFLAGS = -Wall -Werror -std=c++11 -pthread
 all: distwc
+clean-result:
+	rm -rf result*.txt
 clean-all:
 	rm *.o distwc
 	rm -rf result-*.txt
