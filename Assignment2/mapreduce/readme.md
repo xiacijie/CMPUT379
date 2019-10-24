@@ -2,11 +2,12 @@ WARNING: Please read the following notes before using the mapreduce library.
 1. Make sure you free the memory of the char* returned by function char *MR_GetNext(char *key, int partition_number) otherwise it will cause memory leak!
 
 Design of the intermediate data structure:
-    1. The data stucture contains a hash table (unordered_map in C++ STL) and a mutex lock.
-    2. The key of the hash table is the partition number and the value is a list (vector in C++ STL) containing the data.
-    3. The data is a struct with two fields - key and value.
-    4. The data structure has two operation methods. One is DataStructure_addData, which insert data into the hash table at the corresponding partition and maintain the keya in ascending order in the data list. The other is DataStructure_getData, which gets the data with certain key and remove it from the data list. If the key has is not in the list, NULL will be returned. Everytime those two methods manipulating the hash table, they should first acquire the mutex lock, then do the operation and release the lock when finished.
-    5. The DataStructure_peekNext is returning the next key that is unprocessed. If the list is empty, NULL will be returned.
+    1. The data stucture contains a hash table (unordered_map in C++ STL).
+    2. The key of the hash table is the partition number and the value is a list (list in C++ STL) containing the data. list in C++ is a doubly linked list. Insertion and removal take constant time. 
+    3. Every partition holds its own mutex lock. NOT the whole data structure holds a lock!
+    4. The data is a struct with two fields - key and value.
+    5. The data structure has two operation methods. One is DataStructure_addData, which insert data into the hash table at the corresponding partition and maintain the keya in ascending order in the data list. The other is DataStructure_getData, which gets the data with certain key and remove it from the data list. If the key has is not in the list, NULL will be returned. Everytime those two methods manipulating the hash table, they should first acquire its mutex lock at the corresponding position, then do the operation and release the lock when finished.
+    6. The DataStructure_peekNext is returning the next key that is unprocessed. If the list is empty, NULL will be returned.
 
 Time Complexity of MR_Emit:
     O(n). Since the data list should be kept in ascending order, before new data is added to the list, it should first find the position to insert ( by traversing the list). 
