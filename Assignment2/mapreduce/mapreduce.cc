@@ -52,32 +52,24 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
     strcpy(newData->value, value);
 
     pthread_mutex_lock(&ds->hashTable[partition].lock);
-        auto it = ds->hashTable.find(partition);
-        if (it == ds->hashTable.end()){
+      
+        /*** insert the data in acsending order ***/
+        list<Data*> *l = &ds->hashTable[partition].l;
+        list<Data*>::iterator it = l->begin();
+        
+        while (it != l->end()){
             
-            ds->hashTable[partition].l.push_back(newData);
+            Data* data = *it;
+            if (strcmp(data->key, key )<= 0){
+                it++;
+            }
+            else{
+                l->insert(it,newData);
+                break;
+            }
         }
-        else{
-            
-            /*** insert the data in acsending order ***/
-            list<Data*> *l = &ds->hashTable[partition].l;
-            list<Data*>::iterator it = l->begin();
-            
-            while (it != l->end()){
-                
-                Data* data = *it;
-                if (strcmp(data->key, key )<= 0){
-                    it++;
-                }
-                else{
-                    l->insert(it,newData);
-                    break;
-                }
-            }
-            if (it == l->end()){
-                l->insert(it, newData);
-            }
-
+        if (it == l->end()){
+            l->insert(it, newData);
         }
         
     pthread_mutex_unlock(&ds->hashTable[partition].lock);
@@ -102,13 +94,13 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
 /*** peek the next data to be processed ***/
 char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
-    pthread_mutex_lock(&ds->hashTable[partition].lock);
+    //pthread_mutex_lock(&ds->hashTable[partition].lock);
         
-        if (ds->hashTable[partition].l.size() != 0){
-            key = new char[128];
-            strcpy(key,ds->hashTable[partition].l.front()->key);
-        }
-    pthread_mutex_unlock(&ds->hashTable[partition].lock);
+    if (ds->hashTable[partition].l.size() != 0){
+        key = new char[128];
+        strcpy(key,ds->hashTable[partition].l.front()->key);
+    }
+    //pthread_mutex_unlock(&ds->hashTable[partition].lock);
 
     return key;
 }
