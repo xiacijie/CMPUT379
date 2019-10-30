@@ -100,7 +100,8 @@ char *DataStructure_peekNext(DataStructure*ds, long partition){
     pthread_mutex_lock(&ds->dataListContainer[partition].lock);
         
     if (ds->dataListContainer[partition].current != ds->dataListContainer[partition].l.end()){
-        key = ds->dataListContainer[partition].l.front()->key;
+        Data* data = *ds->dataListContainer[partition].current;
+        key = data->key;
     }
     pthread_mutex_unlock(&ds->dataListContainer[partition].lock);
 
