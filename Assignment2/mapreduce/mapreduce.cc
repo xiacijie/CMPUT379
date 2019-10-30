@@ -12,15 +12,16 @@ using namespace std;
 /**
  * Shared Data Structure definition
  * */
-struct Data{
+struct Node{
     char *key;
     char *value;
-    Data* next;
+    Node *next;
 };
 
 typedef struct {
     pthread_mutex_t lock;
-    Data* head;
+    Node* head;
+    Node* processing;
 } DataList_t;
 
 typedef struct
@@ -47,72 +48,67 @@ DataStructure * DataStructure_create(int partitions){
 /*** insert data into shared data structure ***/
 void DataStructure_addData(DataStructure* ds, long partition, char* key, char* value){
     
-    Data* newData = new Data();
-    newData->key = new char[128];
-    newData->value = new char[128];
-    newData->next = NULL;
-    strcpy(newData->key, key);
-    strcpy(newData->value, value);
+    Node* newNode = new Node();
+    newNode->key = new char[128];
+    newNode->value = new char[128];
+    newNode->next = NULL;
+    strcpy(newNode->key, key);
+    strcpy(newNode->value, value);
 
     pthread_mutex_lock(&ds->hashTable[partition].lock);
 
             
         /*** insert the data in acsending order ***/
-        Data* current = ds->hashTable[partition].head;
-        Data* prev = NULL;
-        //printf("0. %s\n",key);
+        Node* current = ds->hashTable[partition].head;
+        Node* prev = NULL;
+       
         if (current == NULL){
-            //printf("1. %s\n",key);
-            ds->hashTable[partition].head = newData;
+           
+            ds->hashTable[partition].head = newNode;
         }
         else{
             while (current != NULL){
                 
-                Data* data = current;
-                //printf("===%s %s++++ %d\n",data->key,key,strcmp(data->key, key ));
-                if (strcmp(data->key, key )< 0){
+                Node* node = current;
+                
+                if (strcmp(node->key, key )< 0){
                     prev = current;
                     current = current->next;
                 }
                 else{
                     if (prev == NULL){
-                        //printf("2. %s\n",key);
-                        ds->hashTable[partition].head = newData;
-                        newData->next = current;
+                        ds->hashTable[partition].head = newNode;
+                        newNode->next = current;
                     }
                     else{
-                        //printf("3. %s\n",key);
-                        newData->next = current;
-                        prev->next = newData;
+                        newNode->next = current;
+                        prev->next = newNode;
                     }
-                    
                     break;
                 }
             }
             if (current == NULL){ //tail
-                prev->next = newData;
+                prev->next = newNode;
             }
         }
-        
-        
         
     pthread_mutex_unlock(&ds->hashTable[partition].lock);
 }
 
 /*** get the next data and remove it from list ***/
-Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
+Node* DataStructure_getData(DataStructure *ds, long partition, char* key){
     
-    Data* data = NULL;
+    Node* node = NULL;
     pthread_mutex_lock(&ds->hashTable[partition].lock);
         
-        if (ds->hashTable[partition].head != NULL && strcmp(ds->hashTable[partition].head->key, key) == 0){
-            data = ds->hashTable[partition].head;
-            ds->hashTable[partition].head = ds->hashTable[partition].head->next; //remove the data
+        if (ds->hashTable[partition].processing != NULL && strcmp(ds->hashTable[partition].processing->key, key) == 0){
+            node = ds->hashTable[partition].processing;
+            ds->hashTable[partition].processing = ds->hashTable[partition].processing->next; //forward the processing by one
         }
         
     pthread_mutex_unlock(&ds->hashTable[partition].lock);
     
-    return data;
+    return node;
 }
 
 /*** peek the next data to be processed ***/
@@ -120,9 +116,8 @@ char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
     pthread_mutex_lock(&ds->hashTable[partition].lock);
         
-        if (ds->hashTable[partition].head != NULL){
-            key = new char[128];
-            strcpy(key,ds->hashTable[partition].head->key);
+        if (ds->hashTable[partition].processing != NULL){
+            key = ds->hashTable[partition].processing->key;
         }
     pthread_mutex_unlock(&ds->hashTable[partition].lock);
 
@@ -132,6 +127,7 @@ char *DataStructure_peekNext(DataStructure*ds, long partition){
 
 /*** free the memory ***/
 void DataStructure_destroy(DataStructure* ds){
+
     delete ds;
 }
 
@@ -199,6 +195,7 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
     }
     ThreadPool_destroy(reducers);
 
+    DataStructure_destroy(ds);
 }
 
 void MR_Emit(char *key, char *value){
@@ -220,33 +217,38 @@ unsigned long MR_Partition(char *key, int num_partitions){
 void MR_ProcessPartition(int* partition_number){
     char *key;
     
+    //set the processing of each data list
+    ds->hashTable[*partition_number].processing = ds->hashTable[*partition_number].head;
+
     while ((key = DataStructure_peekNext(ds, *partition_number)) != NULL ){
-        reducer(key,*partition_number);
-        delete key;
+        reducer(key,*partition_number); 
     }
 
-    
+    //free the meomry of each partition
+    Node* head = ds->hashTable[*partition_number].head;
+
+    while (head){
+        Node *data = head;
+        head = head->next;
+        delete data->key;
+        delete data->value;
+        delete data;
+    }
+
     delete partition_number;
 }
 
-/*** WARNING: whoever uses this method should free the memory of the pointer it returns ***/
 char *MR_GetNext(char *key, int partition_number){
     
     if (key == NULL){
         return NULL;
     }
 
-    Data *data =  DataStructure_getData(ds, partition_number, key);
+    Node *node =  DataStructure_getData(ds, partition_number, key);
 
-    char* value = NULL;
-    if (data != NULL){
-        value = new char[128];
-        strcpy(value, data->value);
-
-        delete data->key;
-        delete data->value;
-        delete data;
+    if (node != NULL){
+        return node->key;
     }
     
-    return value;
+    return NULL;
 }
