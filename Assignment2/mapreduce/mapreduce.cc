@@ -1,6 +1,6 @@
 #include "mapreduce.h"
 #include "threadpool.h"
-#include <unordered_map>
+#include <vector>
 #include <list>
 #include <iostream>
 #include <algorithm>
@@ -20,11 +20,12 @@ typedef struct {
 typedef struct {
     pthread_mutex_t lock;
     list<Data*> l;
+    list<Data*>::iterator current;
 } DataList_t;
 
 typedef struct
 {
-    unordered_map<long, DataList_t> hashTable;
+    vector<DataList_t> dataListContainer;
 
 } DataStructure;
 
@@ -34,8 +35,8 @@ DataStructure * DataStructure_create(int partitions){
     for (long i = 0 ; i < partitions; i ++){
         DataList_t datalist;
 
-        ds->hashTable[i] = datalist;
-        pthread_mutex_init(&ds->hashTable[i].lock,NULL); // initialize the lock for every partition
+        ds->dataListContainer.push_back(datalist);
+        pthread_mutex_init(&ds->dataListContainer[i].lock,NULL); // initialize the lock for every partition
         
     }
     
@@ -51,10 +52,10 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
     strcpy(newData->key, key);
     strcpy(newData->value, value);
 
-    pthread_mutex_lock(&ds->hashTable[partition].lock);
+    pthread_mutex_lock(&ds->dataListContainer[partition].lock);
       
         /*** insert the data in acsending order ***/
-        list<Data*> *l = &ds->hashTable[partition].l;
+        list<Data*> *l = &ds->dataListContainer[partition].l;
         list<Data*>::iterator it = l->begin();
         
         while (it != l->end()){
@@ -72,21 +73,23 @@ void DataStructure_addData(DataStructure* ds, long partition, char* key, char* v
             l->insert(it, newData);
         }
         
-    pthread_mutex_unlock(&ds->hashTable[partition].lock);
+    pthread_mutex_unlock(&ds->dataListContainer[partition].lock);
 }
 
 /*** get the next data and remove it from list ***/
 Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     
     Data* data = NULL;
-    pthread_mutex_lock(&ds->hashTable[partition].lock);
+    pthread_mutex_lock(&ds->dataListContainer[partition].lock);
         
-        if (ds->hashTable[partition].l.size() > 0 && strcmp(ds->hashTable[partition].l.front()->key, key) == 0){
-            data = ds->hashTable[partition].l.front();
-            ds->hashTable[partition].l.pop_front(); //remove the data
+        if (ds->dataListContainer[partition].current != ds->dataListContainer[partition].l.end()
+            && strcmp(ds->dataListContainer[partition].l.front()->key, key) == 0){
+
+            data = ds->dataListContainer[partition].l.front();
+            ds->dataListContainer[partition].current++;
         }
         
-    pthread_mutex_unlock(&ds->hashTable[partition].lock);
+    pthread_mutex_unlock(&ds->dataListContainer[partition].lock);
     
     return data;
 }
@@ -94,13 +97,12 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
 /*** peek the next data to be processed ***/
 char *DataStructure_peekNext(DataStructure*ds, long partition){
     char* key = NULL;
-    //pthread_mutex_lock(&ds->hashTable[partition].lock);
+    pthread_mutex_lock(&ds->dataListContainer[partition].lock);
         
-    if (ds->hashTable[partition].l.size() != 0){
-        key = new char[128];
-        strcpy(key,ds->hashTable[partition].l.front()->key);
+    if (ds->dataListContainer[partition].current != ds->dataListContainer[partition].l.end()){
+        key = ds->dataListContainer[partition].l.front()->key;
     }
-    //pthread_mutex_unlock(&ds->hashTable[partition].lock);
+    pthread_mutex_unlock(&ds->dataListContainer[partition].lock);
 
     return key;
 }
@@ -108,6 +110,15 @@ char *DataStructure_peekNext(DataStructure*ds, long partition){
 
 /*** free the memory ***/
 void DataStructure_destroy(DataStructure* ds){
+    for (unsigned long i = 0 ; i < ds->dataListContainer.size(); i ++){
+        list<Data*> *l = &ds->dataListContainer[i].l;
+        for (list<Data*>::iterator it = l->begin(); it != l->end(); it++){
+            Data* data = *it;
+            delete data->key;
+            delete data->value;
+            delete data;
+        }
+    }
     delete ds;
 }
 
@@ -121,6 +132,7 @@ int M;
 int R;
 Reducer reducer;
 DataStructure *ds;
+
 
 bool compare(struct file &f1, struct file &f2){
     return f1.filesize > f2.filesize;
@@ -175,6 +187,7 @@ void MR_Run(int num_files, char *filenames[],Mapper map, int num_mappers,Reducer
     }
     ThreadPool_destroy(reducers);
 
+    DataStructure_destroy(ds);
 }
 
 void MR_Emit(char *key, char *value){
@@ -194,17 +207,16 @@ unsigned long MR_Partition(char *key, int num_partitions){
 
 void MR_ProcessPartition(int* partition_number){
     char *key;
-    
+
+    //initialize iterator
+    ds->dataListContainer[*partition_number].current = ds->dataListContainer[*partition_number].l.begin();
     while ((key = DataStructure_peekNext(ds, *partition_number)) != NULL ){
         reducer(key,*partition_number);
-        delete key;
     }
 
-    
     delete partition_number;
 }
 
-/*** WARNING: whoever uses this method should free the memory of the pointer it returns ***/
 char *MR_GetNext(char *key, int partition_number){
     
     if (key == NULL){
@@ -213,15 +225,9 @@ char *MR_GetNext(char *key, int partition_number){
 
     Data *data =  DataStructure_getData(ds, partition_number, key);
 
-    char* value = NULL;
     if (data != NULL){
-        value = new char[128];
-        strcpy(value, data->value);
-
-        delete data->key;
-        delete data->value;
-        delete data;
+        return data->value;
     }
     
-    return value;
+    return NULL;
 }

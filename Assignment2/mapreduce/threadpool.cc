@@ -77,7 +77,7 @@ void ThreadPool_destroy(ThreadPool_t *tp) {
 
     pthread_mutex_unlock(&tp->queueLock);
 
-    // block until all ongoing tasks are done( counter is 0)
+     //block until all ongoing tasks are done( counter is 0)
     pthread_mutex_lock(&tp->counterLock);
 
         while(tp->counter != 0){

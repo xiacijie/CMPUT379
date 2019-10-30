@@ -27,7 +27,7 @@ void Reduce(char *key, int partition_number) {
     int count = 0;
     char *value, name[100];
     while ((value = MR_GetNext(key, partition_number)) != NULL){
-        delete value;
+        
         count++;
     }
         
