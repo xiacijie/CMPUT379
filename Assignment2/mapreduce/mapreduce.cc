@@ -81,15 +81,16 @@ Data* DataStructure_getData(DataStructure *ds, long partition, char* key){
     
     Data* data = NULL;
     pthread_mutex_lock(&ds->dataListContainer[partition].lock);
+        DataList_t *dl = &ds->dataListContainer[partition];
         
-        if (ds->dataListContainer[partition].current != ds->dataListContainer[partition].l.end()
-            && strcmp(ds->dataListContainer[partition].l.front()->key, key) == 0){
+        if (dl->current != dl->l.end()
+            && strcmp(((Data*)(*(dl->current)))->key, key) == 0){
 
-            data = ds->dataListContainer[partition].l.front();
-            ds->dataListContainer[partition].current++;
+            data = *dl->current;
+            dl->current++;
         }
         
-    pthread_mutex_unlock(&ds->dataListContainer[partition].lock);
+    pthread_mutex_unlock(&dl->lock);
     
     return data;
 }
