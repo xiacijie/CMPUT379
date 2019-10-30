@@ -119,7 +119,7 @@ bool ThreadPool_add_work(ThreadPool_t *tp, thread_func_t func, void *arg) {
 
         tp->workQueue.workQueue.push(work);
         
-        pthread_cond_broadcast(&tp->workingCondition); //signal the sleeping thread waiting for work
+        pthread_cond_signal(&tp->workingCondition); //signal the sleeping thread waiting for work
 
     pthread_mutex_unlock(&tp->queueLock);
     return true;
