@@ -133,12 +133,27 @@ in the inode must have at least one bit that is not zero ***/
             }
         }
     }
-    super_block = temp_super_block;
+
+
+    /*** 4. The start block of every inode that is marked as a file must have a value between 1 and 127
+inclusive ***/
+    for (int i = 0 ; i < 126 ; i ++ ) {
+        Inode inode = temp_super_block.inode[i];
+
+        if (is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
+            if (inode.start_block < 1 || inode.start_block > 127) {
+                return 4;
+            }
+        }
+    }
+
+
+    super_block = temp_super_block; // replace the super block
     return 0;
 }
 
 
-int is_bit_set(char ch, int i) {
-    char mask = 1 << i;
+int is_bit_set(uint8_t ch, int i) {
+    uint8_t mask = 1 << i;
     return mask & ch; 
 }

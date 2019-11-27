@@ -32,4 +32,4 @@ void fs_defrag(void);
 void fs_cd(char name[5]);
 
 int consistency_check();
-int is_bit_set(char ch, int i);
+int is_bit_set(uint8_t ch, int i);
