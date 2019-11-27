@@ -178,6 +178,7 @@ is between 0 and 125 inclusive, then the parent inode must be in use and marked 
 
 
     super_block = temp_super_block; // replace the super block
+    mounted = 1;
     return 0;
 }
 
