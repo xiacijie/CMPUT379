@@ -17,8 +17,9 @@ typedef struct {
 } Super_block;
 
 typedef struct {
-	char byte[BLOCK_NUM]; // 1 kb
-} Block; //Data block
+	char bytes[BLOCK_SIZE]; // 1 kb
+} Block; 
+
 
 void fs_mount(char *new_disk_name);
 void fs_create(char name[5], int size);
@@ -38,3 +39,6 @@ void clear_bit(uint8_t *ch, int i);
 char *trimwhitespace(char *str);
 void get_block_flags(int* block_flags, char* free_block_list);
 void update_free_block_list(int* block_flags, char* free_block_list);
+int search_for_name(char name[5], Inode* inode_list);
+void clear_data_blocks(uint8_t start_block, uint8_t size);
+void save_super_block();
