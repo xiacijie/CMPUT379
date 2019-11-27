@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define BLOCK_SIZE 1024 // 1024 bytes
+#define BLOCK_NUM  128 // 128 blocks in total
+#define BYTE_LENGTH 8 // 1 byte = 8 bit 
 typedef struct {
 	char name[5];        // Name of the file or directory
 	uint8_t used_size;   // Inode state and the size of the file or directory
@@ -13,6 +16,10 @@ typedef struct {
 	Inode inode[126];
 } Super_block;
 
+typedef struct {
+	char byte[BLOCK_NUM]; // 1 kb
+} Block; //Data block
+
 void fs_mount(char *new_disk_name);
 void fs_create(char name[5], int size);
 void fs_delete(char name[5]);
@@ -23,3 +30,6 @@ void fs_ls(void);
 void fs_resize(char name[5], int new_size);
 void fs_defrag(void);
 void fs_cd(char name[5]);
+
+int consistency_check(char* new_disk_name);
+int is_bit_set(char ch, int i);
