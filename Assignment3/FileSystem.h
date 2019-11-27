@@ -33,3 +33,8 @@ void fs_cd(char name[5]);
 
 int consistency_check();
 int is_bit_set(uint8_t ch, int i);
+void set_bit(uint8_t *ch, int i);
+void clear_bit(uint8_t *ch, int i);
+char *trimwhitespace(char *str);
+void get_block_flags(int* block_flags, char* free_block_list);
+void update_free_block_list(int* block_flags, char* free_block_list);

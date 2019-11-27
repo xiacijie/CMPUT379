@@ -1,28 +1,152 @@
 #include "FileSystem.h"
 #include <string.h>
+#include <ctype.h>
 
 FILE *disk;
-
+char disk_name[1024];
 uint8_t current_dir = 127; // root
 int mounted = 0; // 0 no fs mounted. 1 fs mounted
 Super_block super_block;
 
 int main(){
     fs_mount("disk0");
+    // fs_create("hello",12);
+    fclose(disk);
     return 0;
 }
 
 void fs_mount(char *new_disk_name) {
-    disk = fopen(new_disk_name, "rw");
+    disk = fopen(new_disk_name, "r+");
     if (disk == NULL) {
-        fprintf(stderr, "Error: Cannot find disk %s", new_disk_name);
+        fprintf(stderr, "Error: Cannot find disk %s\n", new_disk_name);
         return;
     }
 
     int status = consistency_check();
     if ( status != 0 ) { // Error
-        fprintf(stderr, "Error: File system in %s is inconsistent (error code: %d)",new_disk_name, status);    
+        fprintf(stderr, "Error: File system in %s is inconsistent (error code: %d)\n",new_disk_name, status);  
+        if (mounted == 0){
+            fprintf(stderr, "Error: No file system is mounted\n" );
+        }
+        return;  
     }
+
+    //load the super block
+    fseek(disk,0,SEEK_SET); // rewind to the start of the file
+    fread(&super_block, sizeof(Super_block), 1, disk);
+
+    mounted = 1;
+    current_dir = 127;  // set to root dir
+    strcpy(disk_name, new_disk_name);
+
+}
+
+void fs_create(char name[5], int size) {
+    //check if inodes are full
+    int available_inode_index = -1;
+    for (int i = 0; i < 126; i ++) {
+        Inode inode = super_block.inode[i];
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) == 0){
+            available_inode_index = i;
+            break;
+        }
+    }
+
+    if (available_inode_index == -1){
+        fprintf(stderr,"Error: Superblock in disk %s is full, cannot create %s\n", disk_name,name);
+        return;
+    }
+
+    printf("fs create: use inode %d\n",available_inode_index);
+
+    //trim name
+    char temp_name[1024];
+    strcpy(temp_name, name);
+    char* trimmed_name = trimwhitespace(temp_name);
+
+    // check for uniqueness of file name
+    for (int i = 0 ; i < 126; i ++) {
+        Inode inode = super_block.inode[i];
+        if (is_bit_set(inode.used_size, BYTE_LENGTH-1)) { //inode in use
+            if (strcmp(inode.name, trimmed_name) == 0) {
+                fprintf(stderr, "Error: File or directory %s already exists\n", trimmed_name);
+                return;
+            }
+        }
+    }
+
+    if (strcmp(trimmed_name, ".") == 0 || strcmp(trimmed_name,"..") == 0) {
+        fprintf(stderr, "Error: File or directory %s already exists\n", trimmed_name);
+        return;
+    }
+
+   
+    //set properties
+    if (size == 0) { //dir
+        strcpy(super_block.inode[available_inode_index].name, trimmed_name);
+        set_bit(&super_block.inode[available_inode_index].used_size,BYTE_LENGTH-1);
+        super_block.inode[available_inode_index].dir_parent = current_dir;
+        set_bit(&super_block.inode[available_inode_index].dir_parent,BYTE_LENGTH-1);
+    }
+    else { // file
+         // scan for available data blocks
+        int block_flags[128] = {0};
+        get_block_flags(block_flags,super_block.free_block_list);
+        int start_block = -1;
+        int end_block = -1;
+        for (int i = 0; i < 128; i ++){
+            int find = 0;
+            for (int j = i ; j < 128; j ++) {
+                if (block_flags[j] == 1) {
+                    break;
+                }
+                else {
+                    if (j-i+1 == size) { // find the first block area
+                        start_block = i;
+                        end_block = j;
+                        find = 1;
+                        break;
+
+                    }
+                }
+            }
+            if (find) {
+                break;
+            }
+        }
+
+        // no fit blocks
+        if (start_block == -1 && end_block == - 1){
+            fprintf(stderr, "Error: Cannot allocate %s on %s\n",trimmed_name,disk_name);
+            return;
+        }
+
+        // update block flags
+        printf("start block: %d end block %d\n",start_block,end_block);
+        for (int i = start_block; i <= end_block; i ++){
+            block_flags[i] = 1;
+        }
+
+        //update free block list
+        update_free_block_list(block_flags,super_block.free_block_list);
+        int new_flags[128];
+        get_block_flags(new_flags,super_block.free_block_list);
+        printf("\n");
+        for (int i = 0 ; i < 128 ; i ++ ){
+            
+            printf("%d ",new_flags[i]);
+        }
+        strcpy(super_block.inode[available_inode_index].name, trimmed_name);
+        super_block.inode[available_inode_index].used_size = size;
+        super_block.inode[available_inode_index].start_block = start_block;
+        set_bit(&super_block.inode[available_inode_index].used_size,BYTE_LENGTH-1);
+        super_block.inode[available_inode_index].dir_parent = current_dir;
+
+    }
+
+    //write to disk
+    fseek(disk,0,SEEK_SET); // rewind to the start of the file
+    fwrite(&super_block, sizeof(Super_block), 1, disk);
 }
 
 /**
@@ -36,15 +160,8 @@ int consistency_check() {
 
     /***** 1. verify free space *****/
     int block_flags[128] = {0};  // 0 not used, 1 used
+    get_block_flags(block_flags, temp_super_block.free_block_list);
 
-    for (int i = 0 ; i < 16; i ++) { // mask for free block num
-        char byte = temp_super_block.free_block_list[i];
-        for (int j = 0 ; j < BYTE_LENGTH; j ++) {
-            if (is_bit_set(byte,BYTE_LENGTH - j - 1)){
-                block_flags[i*BYTE_LENGTH + j] = 1;
-            }
-        }
-    }
 
     //debug
     for (int i = 0 ; i < 128; i ++){
@@ -58,14 +175,17 @@ int consistency_check() {
     for (int i = 0 ; i < 126 ; i ++) {
         Inode inode = temp_super_block.inode[i];
         if (inode.used_size != 0) {
-            uint8_t used_size  = ((inode.used_size) << 1) >> 1; // shift out the first bit
+            uint8_t used_size = inode.used_size; // shift out the first bit
+            clear_bit(&used_size,BYTE_LENGTH-1);
             uint8_t start_block = inode.start_block;
-
+            printf("used size :%d\n", used_size);
             for (int j = 0 ; j < used_size ; j ++) {
 
                 block_reference_count_table[start_block + j] += 1; // increment the refernce count of this block by 1
 
                 if (block_flags[start_block + j] == 0) { // if this block is marked as unused: Error!
+                    printf("%d\n",start_block + j);
+                    printf("Fail 1.1\n");
                     return 1;
                 }
             }
@@ -75,6 +195,7 @@ int consistency_check() {
     // Blocks marked in use in the free-space list must be allocated to exactly one file
     for (int i = 0 ; i < 128 ; i ++ ) {
         if (block_reference_count_table[i] > 1){ // if this block is referred more than once : Error !
+            printf("Fail 1.2\n");
             return 1;
         }
     }
@@ -83,15 +204,18 @@ int consistency_check() {
     for (int i = 0 ; i < 126; i++) {
         Inode inode_i = temp_super_block.inode[i];
 
-        uint8_t dir_parent_i = ((inode_i.dir_parent) << 1 ) >> 1;
+        uint8_t dir_parent_i = inode_i.dir_parent;
+        clear_bit(&dir_parent_i,BYTE_LENGTH-1);
 
-        for (int j = i ; i < 126; i ++) {
+        for (int j = i+1 ; i < 126; i ++) {
             Inode inode_j = temp_super_block.inode[j];
 
-            uint8_t dir_parent_j = ((inode_j.dir_parent) << 1 ) >> 1;
+            uint8_t dir_parent_j = inode_j.dir_parent;
+            clear_bit(&dir_parent_j,BYTE_LENGTH-1);
 
             if (inode_i.used_size != 0 && inode_j.used_size != 0 ) { // inodes are in use
                 if (strcmp(inode_i.name, inode_j.name) == 0) { // duplicate name: Error
+                    printf("%s %s --- \n",inode_i.name,inode_j.name);
                     return 2;
                 }
             }
@@ -139,9 +263,10 @@ in the inode must have at least one bit that is not zero ***/
 inclusive ***/
     for (int i = 0 ; i < 126 ; i ++ ) {
         Inode inode = temp_super_block.inode[i];
-
-        if (inode.used_size != 0 && is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
+        printf("4. Inode %d\n",i);
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
             if (inode.start_block < 1 || inode.start_block > 127) {
+                printf("4. %d\n",inode.start_block);
                 return 4;
             }
         }
@@ -152,7 +277,9 @@ inclusive ***/
         Inode inode = temp_super_block.inode[i];
 
         if (is_bit_set(inode.dir_parent, BYTE_LENGTH-1)) { // directory
-            if (inode.used_size <<1 >> 1 != 0 || inode.start_block != 0) {
+            uint8_t used_size = inode.used_size;
+            clear_bit(&used_size, BYTE_LENGTH-1);
+            if (used_size || inode.start_block != 0) {
                 return 5;
             }
         }
@@ -163,7 +290,8 @@ is between 0 and 125 inclusive, then the parent inode must be in use and marked 
     for (int i = 0 ; i < 126 ; i ++ ) {
         Inode inode = temp_super_block.inode[i];
 
-        uint8_t parent_index = inode.dir_parent << 1 >> 1;
+        uint8_t parent_index = inode.dir_parent;
+        clear_bit(&parent_index, BYTE_LENGTH-1);
         if (parent_index == 126) {
             return 6;
         }
@@ -176,9 +304,6 @@ is between 0 and 125 inclusive, then the parent inode must be in use and marked 
         }
     }
 
-
-    super_block = temp_super_block; // replace the super block
-    mounted = 1;
     return 0;
 }
 
@@ -186,4 +311,64 @@ is between 0 and 125 inclusive, then the parent inode must be in use and marked 
 int is_bit_set(uint8_t ch, int i) {
     uint8_t mask = 1 << i;
     return mask & ch; 
+}
+
+void set_bit(uint8_t* ch, int i) {
+    uint8_t mask = 1 << i;
+    *ch = *ch | mask;
+}
+
+void clear_bit(uint8_t* ch, int i) {
+    uint8_t mask = 1 << i;
+    *ch = *ch & ~(mask);
+}
+
+
+//https://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
+char *trimwhitespace(char *str)
+{
+  char *end;
+
+  // Trim leading space
+  while(isspace((unsigned char)*str)) str++;
+
+  if(*str == 0)  // All spaces?
+    return str;
+
+  // Trim trailing space
+  end = str + strlen(str) - 1;
+  while(end > str && isspace((unsigned char)*end)) end--;
+
+  // Write new null terminator character
+  end[1] = '\0';
+
+  return str;
+}
+
+void get_block_flags(int* block_flags, char* free_block_list) {
+    for (int i = 0 ; i < 16; i ++) { // mask for free block num
+        char byte = free_block_list[i];
+        for (int j = 0 ; j < BYTE_LENGTH; j ++) {
+            if (is_bit_set(byte,BYTE_LENGTH - j - 1)){
+                block_flags[i*BYTE_LENGTH + j] = 1;
+            }
+            else{
+                block_flags[i*BYTE_LENGTH + j] = 0;
+            }
+        }
+    }
+}
+
+void update_free_block_list(int* block_flags, char* free_block_list) {
+    for (int i = 0 ; i < 16; i ++) { 
+        char* byte = &free_block_list[i];
+        for (int j = 0 ; j < BYTE_LENGTH; j ++) {
+            if (block_flags[i*BYTE_LENGTH + j] == 1){ //set bit
+                set_bit(byte,BYTE_LENGTH - j - 1);
+            }
+            else{ // clear bit
+                clear_bit(byte,BYTE_LENGTH - j - 1);
+            }
+        }
+    }
 }
