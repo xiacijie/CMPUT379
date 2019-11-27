@@ -31,5 +31,5 @@ void fs_resize(char name[5], int new_size);
 void fs_defrag(void);
 void fs_cd(char name[5]);
 
-int consistency_check(char* new_disk_name);
+int consistency_check();
 int is_bit_set(char ch, int i);
