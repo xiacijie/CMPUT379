@@ -102,7 +102,37 @@ int consistency_check() {
     /*** 3. If the state of an inode is free, all bits in this inode must be zero. Otherwise, the name attribute stored
 in the inode must have at least one bit that is not zero ***/
 
-    
+    for (int i = 0 ; i < 126; i ++) {
+        Inode inode = temp_super_block.inode[i];
+
+        if (inode.used_size == 0) {
+            // check name
+            for (int j = 0 ; j < 5; j ++){
+                if (inode.name[j] != 0) { // name is not empty: Error
+                    return 3;
+                }
+            }
+
+            //check others
+            if (inode.start_block != 0 || inode.dir_parent != 0 || inode.used_size != 0 ){
+                return 3;
+            }
+        }
+        else { //inode in use
+            //check name, at least one bit is not zero
+            int name_invalid = 1; // invalid initially
+            for (int j = 0 ; j < 5 ; j ++ ){
+                if (inode.name[j] != 0 ) {
+                    name_invalid = 0; // valid
+                    break;
+                }
+            }
+
+            if (name_invalid) {
+                return 3;
+            }
+        }
+    }
     super_block = temp_super_block;
     return 0;
 }
