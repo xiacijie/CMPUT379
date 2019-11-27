@@ -147,6 +147,17 @@ inclusive ***/
         }
     }
 
+    /*** 5. The size and start block of an inode that is marked as a directory must be zero. ***/
+    for (int i = 0 ; i < 126 ; i ++ ) {
+        Inode inode = temp_super_block.inode[i];
+
+        if (is_bit_set(inode.dir_parent, BYTE_LENGTH-1)) { // directory
+            if (inode.used_size != 0 || inode.start_block != 0) {
+                return 5;
+            }
+        }
+    }
+
 
     super_block = temp_super_block; // replace the super block
     return 0;
