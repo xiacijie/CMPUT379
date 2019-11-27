@@ -105,7 +105,7 @@ in the inode must have at least one bit that is not zero ***/
     for (int i = 0 ; i < 126; i ++) {
         Inode inode = temp_super_block.inode[i];
 
-        if (inode.used_size == 0) {
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) == 0) { //inode free
             // check name
             for (int j = 0 ; j < 5; j ++){
                 if (inode.name[j] != 0) { // name is not empty: Error
@@ -152,8 +152,26 @@ inclusive ***/
         Inode inode = temp_super_block.inode[i];
 
         if (is_bit_set(inode.dir_parent, BYTE_LENGTH-1)) { // directory
-            if (inode.used_size != 0 || inode.start_block != 0) {
+            if (inode.used_size <<1 >> 1 != 0 || inode.start_block != 0) {
                 return 5;
+            }
+        }
+    }
+
+    /*** 6. For every inode, the index of its parent inode cannot be 126. Moreover, if the index of the parent inode
+is between 0 and 125 inclusive, then the parent inode must be in use and marked as a directory. ***/
+    for (int i = 0 ; i < 126 ; i ++ ) {
+        Inode inode = temp_super_block.inode[i];
+
+        uint8_t parent_index = inode.dir_parent << 1 >> 1;
+        if (parent_index == 126) {
+            return 6;
+        }
+
+        if (parent_index >+ 0 && parent_index <= 125) { // directory
+            Inode parent_inode = temp_super_block.inode[parent_index];
+            if (is_bit_set(parent_inode.used_size,BYTE_LENGTH-1) == 0 || is_bit_set(parent_inode.dir_parent, BYTE_LENGTH-1) == 0 ) {
+                return 6;
             }
         }
     }
