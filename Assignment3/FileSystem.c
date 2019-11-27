@@ -140,7 +140,7 @@ inclusive ***/
     for (int i = 0 ; i < 126 ; i ++ ) {
         Inode inode = temp_super_block.inode[i];
 
-        if (is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
+        if (inode.used_size != 0 && is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
             if (inode.start_block < 1 || inode.start_block > 127) {
                 return 4;
             }
