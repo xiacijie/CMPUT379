@@ -10,7 +10,7 @@ Super_block super_block;
 
 int main(){
     fs_mount("disk0");
-    // fs_create("hello",12);
+    fs_create("hell",12);
     fclose(disk);
     return 0;
 }
@@ -68,7 +68,8 @@ void fs_create(char name[5], int size) {
     for (int i = 0 ; i < 126; i ++) {
         Inode inode = super_block.inode[i];
         if (is_bit_set(inode.used_size, BYTE_LENGTH-1)) { //inode in use
-            if (strcmp(inode.name, trimmed_name) == 0) {
+            printf("Check name: %s %s\n",inode.name, trimmed_name);
+            if (strncmp(inode.name, trimmed_name,5) == 0) {
                 fprintf(stderr, "Error: File or directory %s already exists\n", trimmed_name);
                 return;
             }
@@ -136,7 +137,7 @@ void fs_create(char name[5], int size) {
             
             printf("%d ",new_flags[i]);
         }
-        strcpy(super_block.inode[available_inode_index].name, trimmed_name);
+        strncpy(super_block.inode[available_inode_index].name, trimmed_name,5);
         super_block.inode[available_inode_index].used_size = size;
         super_block.inode[available_inode_index].start_block = start_block;
         set_bit(&super_block.inode[available_inode_index].used_size,BYTE_LENGTH-1);
@@ -263,7 +264,6 @@ in the inode must have at least one bit that is not zero ***/
 inclusive ***/
     for (int i = 0 ; i < 126 ; i ++ ) {
         Inode inode = temp_super_block.inode[i];
-        printf("4. Inode %d\n",i);
         if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent, BYTE_LENGTH-1) == 0 ) { // file
             if (inode.start_block < 1 || inode.start_block > 127) {
                 printf("4. %d\n",inode.start_block);
