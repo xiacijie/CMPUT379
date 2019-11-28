@@ -73,10 +73,14 @@ int main(int argc, char* argv[]){
         case 'B' : { // fs_buff
 
             char buff[1024];
-            if (sscanf(line, "B %s\n", buff) != 1 || num_words(line) != 2 ) {
+            if (num_words(line) == 1 ) {
                 print_command_error(argv[1], line_num);
                 break;
             }
+
+            strncpy(buff, line+2, strlen(line)-3);  // dot not copy /n
+            buff[strlen(line)-3] = '\0';
+            printf("BUFF: %s",buff);
 
             fs_buff((uint8_t*)buff);
             break;
@@ -631,10 +635,10 @@ void fs_cd(char name[5]) {
 int num_words(char* sentence) {
     int counter = 0;
     for (int i = 0; sentence[i] != '\0'; i++) {
-        if (sentence[i] == ' ' && sentence[i+1] != ' ')
+        if ((sentence[i] == ' ' && sentence[i+1] != ' ') || (sentence[i] == '\n' && i > 0 && sentence[i-1] !=' '))
             counter++;    
     }
-    return counter+1;
+    return counter;
 }
 
 int find_fit_blocks(int size) {
