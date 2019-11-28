@@ -41,7 +41,7 @@ int num_words(char* sentence);
 int find_fit_blocks(int size);
 int compare(const void *a, const void* b);
 void print_command_error(char* input_file, int line_num);
-int consistency_check();
+int consistency_check(FILE* temp_disk);
 int is_bit_set(uint8_t ch, int i);
 void set_bit(uint8_t *ch, int i);
 void clear_bit(uint8_t *ch, int i);

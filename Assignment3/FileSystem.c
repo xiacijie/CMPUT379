@@ -28,10 +28,9 @@ int main(int argc, char* argv[]){
     char line[1024];
     int line_num = 0;
     while(fgets(line, sizeof(line), input_file)) {
-        
         line_num ++;
 
-        printf("%s\n",line);
+        // printf("%s\n",line);
         char command = line[0];
 
         switch (command)
@@ -73,14 +72,16 @@ int main(int argc, char* argv[]){
         case 'B' : { // fs_buff
 
             char buff[1024];
-            if (num_words(line) == 1 ) {
+            char copy[1024];
+            strcpy(copy, line);
+
+            if (num_words(copy) == 1 ) {
                 print_command_error(argv[1], line_num);
                 break;
             }
 
             strncpy(buff, line+2, strlen(line)-3);  // dot not copy /n
             buff[strlen(line)-3] = '\0';
-            printf("BUFF: %s",buff);
 
             fs_buff((uint8_t*)buff);
             break;
@@ -156,6 +157,7 @@ int main(int argc, char* argv[]){
             print_command_error(argv[1], line_num);
             break;
         }
+        memset(line,0,1024);
         
     }
     fclose(input_file);
@@ -164,22 +166,26 @@ int main(int argc, char* argv[]){
 }
 
 void fs_mount(char *new_disk_name) {
-    if (disk != NULL) {
-        fclose(disk);
-    }
 
-    disk = fopen(new_disk_name, "r+");
-    if (disk == NULL) {
+
+    FILE* temp_disk = fopen(new_disk_name, "r+");
+    if (temp_disk == NULL) {
         fprintf(stderr, "Error: Cannot find disk %s\n", new_disk_name);
         return;
     }
 
-    int status = consistency_check();
+    int status = consistency_check(temp_disk);
     if ( status != 0 ) { // Error
         fprintf(stderr, "Error: File system in %s is inconsistent (error code: %d)\n",new_disk_name, status);  
+        fclose(temp_disk);
         return;  
     }
 
+    if (disk != NULL) {
+        fclose(disk);
+    }
+
+    disk = temp_disk;
     //load the super block
     fseek(disk,0,SEEK_SET); // rewind to the start of the file
     fread(&super_block, sizeof(Super_block), 1, disk);
@@ -228,7 +234,6 @@ void fs_create(char name[5], int size) {
         return;
     }
 
-   
     //set properties
     if (size == 0) { //dir
         strcpy(super_block.inode[available_inode_index].name, trimmed_name);
@@ -238,7 +243,6 @@ void fs_create(char name[5], int size) {
     }
     else { // file
         // scan for available data blocks
-        
         int start_block = find_fit_blocks(size);
         // no fit blocks
         if (start_block == -1){
@@ -263,7 +267,6 @@ void fs_create(char name[5], int size) {
         set_bit(&super_block.inode[available_inode_index].used_size,BYTE_LENGTH-1);
         super_block.inode[available_inode_index].dir_parent = current_dir;
     }
-
     //write to disk
     save_super_block();
 }
@@ -433,7 +436,8 @@ void fs_defrag(void) {
     }
 
     //sort the files by start block
-    qsort(sorted_files,files_size,sizeof(Inode), compare);
+    qsort(sorted_files,files_size,sizeof(InodeIndex), compare);
+
     for (int i = 0 ; i < files_size; i ++) {
         InodeIndex ii = sorted_files[i];
         Inode inode = ii.inode;
@@ -454,7 +458,6 @@ void fs_defrag(void) {
             }
             //set the start block
             if (j == start_block) {
-                printf("New start block iNode:%d %d---\n",ii.index,smallest_number+1);
                 super_block.inode[ii.index].start_block = smallest_number + 1;
             }
 
@@ -633,10 +636,12 @@ void fs_cd(char name[5]) {
  * *********************/
 
 int num_words(char* sentence) {
+    char* token;
     int counter = 0;
-    for (int i = 0; sentence[i] != '\0'; i++) {
-        if ((sentence[i] == ' ' && sentence[i+1] != ' ') || (sentence[i] == '\n' && i > 0 && sentence[i-1] !=' '))
-            counter++;    
+    token = strtok(sentence, " ");
+    for(int i = 0; token != NULL; ++i){
+        counter ++;
+        token = strtok(NULL, " ");
     }
     return counter;
 }
@@ -683,11 +688,11 @@ void print_command_error(char* input_file, int line_num){
 /**
  * 0: no error
  */
-int consistency_check() {
+int consistency_check(FILE * temp_disk) {
     Super_block temp_super_block; 
 
-    fseek(disk,0,SEEK_SET); // rewind to the start of the file
-    fread(&temp_super_block, sizeof(Super_block), 1, disk);
+    fseek(temp_disk,0,SEEK_SET); // rewind to the start of the file
+    fread(&temp_super_block, sizeof(Super_block), 1, temp_disk);
 
     /***** 1. verify free space *****/
     int block_flags[128] = {0};  // 0 not used, 1 used

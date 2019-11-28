@@ -1,3 +1,3 @@
 cp ../../archieve_sample_tests/sample_test_4/clean_disk ./
 gcc -Wall ../../FileSystem.c
-./a.out trivial-input
+./a.out trivial-input 2> err 1> out
