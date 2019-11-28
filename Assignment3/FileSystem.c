@@ -4,10 +4,12 @@
 #include <stdio.h>
 
 FILE *disk;
-char disk_name[1024];
-uint8_t current_dir = 127; // root
+char disk_name[512];
+uint8_t current_dir = 127; // root  .
+uint8_t parent_dir = 127; // root ..
 int mounted = 0; // 0 no fs mounted. 1 fs mounted
 Super_block super_block;
+Buffer buffer;
 
 int main(int argc, char* argv[]){
     if (argc < 2){
@@ -18,17 +20,93 @@ int main(int argc, char* argv[]){
     FILE *input_file = fopen(argv[1],"r");
 
     char line[1024];
+    int line_num = 0;
     while(fgets(line, sizeof(line), input_file)) {
-        char command = line[0];
-        printf("%c", command);
+        
+        line_num ++;
         printf("%s", line);
+        
+        char command = line[0];
+
+        switch (command)
+        {
+        case 'M': { //fs_mount
+
+            char disk_name[512];
+            if (sscanf(line, "M %s\n",disk_name) != 1){
+                print_command_error(argv[1], line_num);
+                break;
+            }
+            fs_mount(disk_name);
+            break;
+            
+        }
+        case 'C': { //fs_create
+  
+            char file_name[512];
+            int size;
+            if (sscanf(line, "C %s %d\n", file_name, &size) != 2 || strlen(file_name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+            fs_create(file_name, size);
+            break;
+        }
+        case 'D' : { //fs_delete
+
+            char file_name[512];
+            if (sscanf(line, "D %s\n", file_name) != 1 || strlen(file_name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+            fs_delete(file_name);
+            break;
+
+        }
+
+        case 'B' : { // fs_buff
+
+            char buff[1024];
+            if (sscanf(line, "B %s\n", buff) != 1 ) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+
+            fs_buff((uint8_t*)buff);
+            break;
+
+        }
+
+        case 'W' : {
+            
+            char name[1024];
+            int block_num;
+            if (sscanf(line, "W %s %d\n", name, &block_num) != 2 || strlen(name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+
+            fs_write(name, block_num);
+            break;
+        }
+
+        case 'L': {
+            fs_ls();
+        }
+
+        default:
+            print_command_error(argv[1], line_num);
+            break;
+        }
+        
+
     }
 
-    fs_mount("disk0");
-    fs_create("hell",12);
-    fs_delete("hell");
-    fs_delete("hell");
-
+    // fs_mount("disk0");
+    // fs_create("hell",12);
+    // fs_delete("hell");
+    // fs_delete("hell");
+    fs_mount("disk1");
     fclose(input_file);
     fclose(disk);
     return 0;
@@ -85,7 +163,7 @@ void fs_create(char name[5], int size) {
     char* trimmed_name = trimwhitespace(temp_name);
 
     // check for uniqueness of file name
-    int result = search_for_name(trimmed_name, super_block.inode);
+    int result = search_for_name(current_dir ,trimmed_name, super_block.inode);
     if (result != -1) {
         fprintf(stderr, "Error: File or directory %s already exists\n", trimmed_name);
         return;
@@ -172,7 +250,7 @@ void fs_delete(char name[5]) {
     char temp_name[1024];
     strcpy(temp_name, name);
     char * trimmed_name = trimwhitespace(temp_name);
-    int inode_index = search_for_name(trimmed_name, super_block.inode);
+    int inode_index = search_for_name(current_dir, trimmed_name, super_block.inode);
 
     //file does not exist
     if (inode_index == -1) {
@@ -228,11 +306,75 @@ void fs_delete(char name[5]) {
 
 }
 
+void fs_buff(uint8_t buff[1024]) {
+    memset(buffer.bytes,0,1024); // flush the buffer
+    // set the buffer
+    for (int i = 0 ; i < 1024; i ++) {
+        buffer.bytes[i] = (char)buff[i];
+    } 
+}
+
+void fs_write(char name[5], int block_num) {
+    int inode_index = search_for_name(current_dir, name, super_block.inode);
+    if ( inode_index == -1) {
+        fprintf(stderr, "Error: File %s does not exist\n", name);
+        return;
+    }
+    Inode inode = super_block.inode[inode_index];
+    
+    uint8_t start_block = inode.start_block;
+    uint8_t size = inode.used_size;
+    clear_bit(&size, BYTE_LENGTH-1);
+    if (block_num > size - 1) {
+        fprintf(stderr, "Error: %s does not have block %d\n",name, block_num);
+        return;
+    }
+
+    Block new_block;
+    for (int i = 0 ; i < 1024; i ++ ){
+        new_block.bytes[i] = buffer.bytes[i];
+    }
+
+    write_data_block(new_block, start_block + block_num);
+}
+
+void fs_ls() {
+    printf("%-5s %3d\n", ".", get_directory_size(current_dir, super_block.inode));
+    printf("%-5s %3d\n", "..", get_directory_size(parent_dir, super_block.inode));
+
+    for (int i = 0 ; i < 126; i ++) {
+        Inode inode = super_block.inode[i];
+        if (is_bit_set(inode.used_size, BYTE_LENGTH-1)) {
+            uint8_t dir_par = inode.dir_parent;
+            uint8_t parent = dir_par;
+            clear_bit(&dir_par, BYTE_LENGTH-1);
+
+            if (is_bit_set(dir_par,BYTE_LENGTH-1) == 0) { //file
+
+                if (parent == current_dir) {
+                    uint8_t size = inode.used_size;
+                    clear_bit(&size,BYTE_LENGTH-1);
+                    printf("%-5s %3d KB\n", inode.name, size);
+                }
+            }
+            else { //dir
+                if (parent == current_dir) {
+                    printf("%-5s %3d\n", "..", get_directory_size(i, super_block.inode));
+                }
+            }
+        }
+    }
+}
+
 
 /************************
  *  Helper functions  ***
  *                    ***
  * *********************/
+
+void print_command_error(char* input_file, int line_num){
+    fprintf(stderr, "Command Error: %s, %d\n", input_file, line_num);
+}
 
 /**
  * 0: no error
@@ -457,10 +599,12 @@ void update_free_block_list(int* block_flags, char* free_block_list) {
     }
 }
 
-int search_for_name(char name[5], Inode* inode_list) {
+int search_for_name(uint8_t current_dir, char name[5], Inode* inode_list) {
     for (int i = 0 ; i < 126; i ++) {
         Inode inode = inode_list[i];
-        if (is_bit_set((uint8_t)inode.used_size, BYTE_LENGTH-1)) { //inode in use
+        uint8_t par_dir = inode.dir_parent;
+        clear_bit(&par_dir,BYTE_LENGTH-1);
+        if (is_bit_set((uint8_t)inode.used_size, BYTE_LENGTH-1) && current_dir == par_dir  ) { //inode in use and it is in current directory
             if (strncmp(inode.name, name,5) == 0) {
                 return i;
             }
@@ -469,18 +613,34 @@ int search_for_name(char name[5], Inode* inode_list) {
     return -1; // does not exist
 }
 
+int get_directory_size(uint8_t current_dir,Inode* inode_list) {
+    int counter = 0;
+    for (int i = 0 ; i < 126; i ++) {
+        Inode inode = inode_list[i];
+        uint8_t par_dir = inode.dir_parent;
+        clear_bit(&par_dir,BYTE_LENGTH-1);
+        if (is_bit_set(inode.used_size, BYTE_LENGTH-1) && par_dir == current_dir ) {
+            counter += 1;
+        }
+    }
+
+    return counter + 2;
+}
 
 void clear_data_blocks(uint8_t start_block, uint8_t size) {
     Block empty_block; 
     memset(empty_block.bytes,0,BLOCK_SIZE); 
 
-    //load the super block
-
     fseek(disk,start_block * sizeof(Block),SEEK_SET); // rewind to the start block
 
-    for (uint8_t i = start_block; i < start_block + size; i ++) {
+    for (uint8_t i = 0; i < size; i ++) {
         fwrite(&empty_block, sizeof(Block), 1, disk); // clear each data block
     }
+}
+
+void write_data_block(Block block, int global_block_num) {
+    fseek(disk, global_block_num* sizeof(Block), SEEK_SET);
+    fwrite(&block, sizeof(Block),1 , disk);
 }
 
 void save_super_block() {
