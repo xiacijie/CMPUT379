@@ -9,7 +9,7 @@ typedef struct {
     int index;
 } InodeIndex;
 
-FILE *disk;
+FILE *disk = NULL;
 char disk_name[512];
 uint8_t current_dir = 127; // root  .
 uint8_t parent_dir = 127; // root ..
@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
         case 'M': { //fs_mount
 
             char disk_name[512];
-            if (sscanf(line, "M %s\n",disk_name) != 1){
+            if (sscanf(line, "M %s\n",disk_name) != 1 || num_words(line) != 2){
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
   
             char file_name[512];
             int size;
-            if (sscanf(line, "C %s %d\n", file_name, &size) != 2 || strlen(file_name) > 5) {
+            if (sscanf(line, "C %s %d\n", file_name, &size) != 2 || strlen(file_name) > 5 || num_words(line) != 3 || size < 0 || size > 127) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]){
         case 'D' : { //fs_delete
 
             char file_name[512];
-            if (sscanf(line, "D %s\n", file_name) != 1 || strlen(file_name) > 5) {
+            if (sscanf(line, "D %s\n", file_name) != 1 || strlen(file_name) > 5 || num_words(line) != 2) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]){
         case 'B' : { // fs_buff
 
             char buff[1024];
-            if (sscanf(line, "B %s\n", buff) != 1 ) {
+            if (sscanf(line, "B %s\n", buff) != 1 || num_words(line) != 2 ) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]){
             
             char name[1024];
             int block_num;
-            if (sscanf(line, "W %s %d\n", name, &block_num) != 2 || strlen(name) > 5) {
+            if (sscanf(line, "W %s %d\n", name, &block_num) != 2 || strlen(name) > 5 || num_words(line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -97,11 +97,19 @@ int main(int argc, char* argv[]){
         }
 
         case 'L': {
+            if ( num_words(line) != 1){
+                print_command_error(argv[1], line_num);
+                break;
+            }
             fs_ls();
             break;
         }
 
         case 'O': {
+            if (num_words(line) != 1){
+                print_command_error(argv[1], line_num);
+                break;
+            }
             fs_defrag();
             break;
         }
@@ -110,7 +118,7 @@ int main(int argc, char* argv[]){
 
             char name[1024];
             int new_size;
-            if (sscanf(line, "E %s %d\n",name,&new_size) != 2 || strlen(name) > 5) {
+            if (sscanf(line, "E %s %d\n",name,&new_size) != 2 || strlen(name) > 5 || num_words(line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -121,7 +129,7 @@ int main(int argc, char* argv[]){
         case 'R': {
             char name[1024];
             int block_num;
-            if (sscanf(line, "R %s %d\n",name,&block_num) != 2 || strlen(name) > 5) {
+            if (sscanf(line, "R %s %d\n",name,&block_num) != 2 || strlen(name) > 5|| num_words(line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -131,7 +139,7 @@ int main(int argc, char* argv[]){
         }
         case 'Y': {
             char name[1024];
-            if (sscanf(line, "Y %s\n", name) != 1 || strlen(name) > 5) {
+            if (sscanf(line, "Y %s\n", name) != 1 || strlen(name) > 5|| num_words(line) != 2) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -144,15 +152,7 @@ int main(int argc, char* argv[]){
             print_command_error(argv[1], line_num);
             break;
         }
-
-        // int flags[128];
-        // get_block_flags(flags, super_block.free_block_list);
-        // for (int i = 0 ; i < 128; i ++) {
-        //     printf("[%d]: %d ",i,flags[i]);
-        // }
-        // printf("\n");
         
-
     }
     fclose(input_file);
     fclose(disk);
@@ -160,6 +160,10 @@ int main(int argc, char* argv[]){
 }
 
 void fs_mount(char *new_disk_name) {
+    if (disk != NULL) {
+        fclose(disk);
+    }
+
     disk = fopen(new_disk_name, "r+");
     if (disk == NULL) {
         fprintf(stderr, "Error: Cannot find disk %s\n", new_disk_name);
@@ -291,7 +295,7 @@ void fs_delete(char name[5]) {
         // clear inode data
         super_block.inode[inode_index].dir_parent = 0;
         memset(super_block.inode[inode_index].name, 0, 5);
-         super_block.inode[inode_index].start_block = 0;
+        super_block.inode[inode_index].start_block = 0;
         super_block.inode[inode_index].used_size = 0;
         save_super_block();
 
@@ -326,6 +330,10 @@ void fs_delete(char name[5]) {
 }
 
 void fs_buff(uint8_t buff[1024]) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     memset(buffer.bytes,0,1024); // flush the buffer
     // set the buffer
     for (int i = 0 ; i < 1024; i ++) {
@@ -334,6 +342,10 @@ void fs_buff(uint8_t buff[1024]) {
 }
 
 void fs_write(char name[5], int block_num) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     int inode_index = search_for_name(current_dir, name, super_block.inode);
     if ( inode_index == -1) {
         fprintf(stderr, "Error: File %s does not exist\n", name);
@@ -358,6 +370,10 @@ void fs_write(char name[5], int block_num) {
 }
 
 void fs_ls(void) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     printf("%-5s %3d\n", ".", get_directory_size(current_dir, super_block.inode));
     printf("%-5s %3d\n", "..", get_directory_size(parent_dir, super_block.inode));
 
@@ -392,6 +408,10 @@ void fs_ls(void) {
 }
 
 void fs_defrag(void) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     int block_flags[128] = {0};
     get_block_flags(block_flags,super_block.free_block_list);
 
@@ -413,7 +433,7 @@ void fs_defrag(void) {
     for (int i = 0 ; i < files_size; i ++) {
         InodeIndex ii = sorted_files[i];
         Inode inode = ii.inode;
-        printf("defag: %d\n",inode.start_block);
+
         uint8_t start_block = inode.start_block;
         uint8_t size = inode.used_size;
         clear_bit(&size, BYTE_LENGTH-1);
@@ -450,6 +470,10 @@ void fs_defrag(void) {
 }
 
 void fs_resize(char name[5], int new_size) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     int inode_index = search_for_name(current_dir,name,super_block.inode);
     if (inode_index == -1) {
         fprintf(stderr, "Error: File %s does not exist\n", name);
@@ -522,7 +546,7 @@ void fs_resize(char name[5], int new_size) {
             for (int i = 0 ; i < size_gap; i ++ ) {
                 block_flags[i+size+new_start_block] = 1;
             }
-            printf("NEW start block: %d --- %d\n",new_start_block,inode_index);
+
             super_block.inode[inode_index].start_block = new_start_block;
             uint8_t updated_size = new_size;
             set_bit(&updated_size, BYTE_LENGTH-1);
@@ -535,6 +559,10 @@ void fs_resize(char name[5], int new_size) {
 }
 
 void fs_read(char name[5], int block_num) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     int inode_index = search_for_name(current_dir, name, super_block.inode);
     if (inode_index == -1){
         fprintf(stderr, "Error: File %s does not exist\n", name);
@@ -559,6 +587,10 @@ void fs_read(char name[5], int block_num) {
 }
 
 void fs_cd(char name[5]) {
+    if (mounted == 0){
+        fprintf(stderr, "Error: No file system is mounted\n" );
+        return;
+    }
     int inode_index;
 
     if (strcmp(name,".") == 0 ){
@@ -589,13 +621,22 @@ void fs_cd(char name[5]) {
     clear_bit(&par_dir, BYTE_LENGTH-1);
     parent_dir = par_dir;
     current_dir = inode_index;
-    printf("Change DIR p: %d c: %d\n",parent_dir,current_dir);
 }
 
 /************************
  *  Helper functions  ***
  *                    ***
  * *********************/
+
+int num_words(char* sentence) {
+    int counter = 0;
+    for (int i = 0; sentence[i] != '\0'; i++) {
+        if (sentence[i] == ' ' && sentence[i+1] != ' ')
+            counter++;    
+    }
+    return counter+1;
+}
+
 int find_fit_blocks(int size) {
 
     int block_flags[128] = {0};
@@ -655,17 +696,12 @@ int consistency_check() {
     for (int i = 0 ; i < 126 ; i ++) {
         Inode inode = temp_super_block.inode[i];
         if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
-            printf("Inode: %d\n",i);
             uint8_t used_size = inode.used_size; 
             clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
             uint8_t start_block = inode.start_block;
             for (int j = 0 ; j < used_size ; j ++) {
 
                 block_reference_count_table[start_block + j] += 1; // increment the refernce count of this block by 1
-                if (start_block +j == 2) {
-                    printf("-------Inode: %d, start block: %d\n",i,start_block);
-                }
-
                 if (block_flags[start_block + j] == 0) { // if this block is marked as unused: Error!
                     printf("%d\n",start_block + j);
                     printf("Fail 1.1\n");
@@ -698,7 +734,6 @@ int consistency_check() {
 
             if (inode_i.used_size != 0 && inode_j.used_size != 0 ) { // inodes are in use
                 if (strcmp(inode_i.name, inode_j.name) == 0) { // duplicate name: Error
-                    printf("%s %s --- \n",inode_i.name,inode_j.name);
                     return 2;
                 }
             }
@@ -910,5 +945,8 @@ void write_data_block(Block block, int global_block_num) {
 void save_super_block() {
     //write to disk
     fseek(disk,0,SEEK_SET); // rewind to the start of the file
-    fwrite(&super_block, sizeof(Super_block), 1, disk);
+    int i = fwrite(&super_block, sizeof(Super_block), 1, disk);
+    if (i != 1){
+        printf("Fail to save super block!\n");
+    }
 }

@@ -37,6 +37,7 @@ void fs_defrag(void);
 void fs_cd(char name[5]);
 
 /*** Helper functions ***/
+int num_words(char* sentence);
 int find_fit_blocks(int size);
 int compare(const void *a, const void* b);
 void print_command_error(char* input_file, int line_num);
