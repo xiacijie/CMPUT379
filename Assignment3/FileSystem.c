@@ -4,6 +4,11 @@
 #include <ctype.h>
 #include <stdio.h>
 
+typedef struct {
+    Inode inode;
+    int index;
+} InodeIndex;
+
 FILE *disk;
 char disk_name[512];
 uint8_t current_dir = 127; // root  .
@@ -26,7 +31,7 @@ int main(int argc, char* argv[]){
         
         line_num ++;
 
-        
+        printf("%s\n",line);
         char command = line[0];
 
         switch (command)
@@ -139,15 +144,16 @@ int main(int argc, char* argv[]){
             print_command_error(argv[1], line_num);
             break;
         }
+
+        // int flags[128];
+        // get_block_flags(flags, super_block.free_block_list);
+        // for (int i = 0 ; i < 128; i ++) {
+        //     printf("[%d]: %d ",i,flags[i]);
+        // }
+        // printf("\n");
         
 
     }
-
-    // fs_mount("disk0");
-    // fs_create("hell",12);
-    // fs_delete("hell");
-    // fs_delete("hell");
-    fs_mount("disk1");
     fclose(input_file);
     fclose(disk);
     return 0;
@@ -172,6 +178,7 @@ void fs_mount(char *new_disk_name) {
 
     mounted = 1;
     current_dir = 127;  // set to root dir
+    parent_dir = 127;
     strcpy(disk_name, new_disk_name);
 
 }
@@ -284,6 +291,7 @@ void fs_delete(char name[5]) {
         // clear inode data
         super_block.inode[inode_index].dir_parent = 0;
         memset(super_block.inode[inode_index].name, 0, 5);
+         super_block.inode[inode_index].start_block = 0;
         super_block.inode[inode_index].used_size = 0;
         save_super_block();
 
@@ -358,7 +366,7 @@ void fs_ls(void) {
         if (is_bit_set(inode.used_size, BYTE_LENGTH-1)) {
             uint8_t dir_par = inode.dir_parent;
             uint8_t parent = dir_par;
-            clear_bit(&dir_par, BYTE_LENGTH-1);
+            clear_bit(&parent, BYTE_LENGTH-1);
 
             if (is_bit_set(dir_par,BYTE_LENGTH-1) == 0) { //file
 
@@ -373,7 +381,10 @@ void fs_ls(void) {
             }
             else { //dir
                 if (parent == current_dir) {
-                    printf("%-5s %3d\n", "..", get_directory_size(i, super_block.inode));
+                    char print_name[6];
+                    strncpy(print_name,inode.name,5);
+                    print_name[5] = '\0';
+                    printf("%-5s %3d\n", print_name, get_directory_size(i, super_block.inode));
                 }
             }
         }
@@ -384,20 +395,25 @@ void fs_defrag(void) {
     int block_flags[128] = {0};
     get_block_flags(block_flags,super_block.free_block_list);
 
-    Inode sorted_files[126];
+    InodeIndex sorted_files[126];
+
     int files_size = 0;
-    for (int i = 1; i < 128; i ++) {
+    for (int i = 0; i < 128; i ++) {
         Inode inode = super_block.inode[i];
         if (is_bit_set(inode.used_size, BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1)==0) {
-            sorted_files[files_size++] = inode;
+            InodeIndex ii;
+            ii.index = i;
+            ii.inode = inode;
+            sorted_files[files_size++] = ii;
         }
     }
 
     //sort the files by start block
     qsort(sorted_files,files_size,sizeof(Inode), compare);
     for (int i = 0 ; i < files_size; i ++) {
-
-        Inode inode = sorted_files[i];
+        InodeIndex ii = sorted_files[i];
+        Inode inode = ii.inode;
+        printf("defag: %d\n",inode.start_block);
         uint8_t start_block = inode.start_block;
         uint8_t size = inode.used_size;
         clear_bit(&size, BYTE_LENGTH-1);
@@ -412,10 +428,15 @@ void fs_defrag(void) {
                     smallest_number --;
                 }
             }
+            //set the start block
+            if (j == start_block) {
+                printf("New start block iNode:%d %d---\n",ii.index,smallest_number+1);
+                super_block.inode[ii.index].start_block = smallest_number + 1;
+            }
 
             Block block = get_data_block(j);
             clear_data_blocks(j,1);
-            write_data_block(block, smallest_number);
+            write_data_block(block, smallest_number+1);
             block_flags[j] = 0;
             block_flags[smallest_number+1] = 1;
             
@@ -446,7 +467,7 @@ void fs_resize(char name[5], int new_size) {
 
     uint8_t start_block = inode.start_block;
     if (new_size < size) { //size smaller that current size
-        for (int i = start_block + size -1 ; i < start_block + new_size; i ++) {
+        for (int i = start_block + size -1 ; i >= start_block + new_size; i --) {
             block_flags[i] = 0;
             clear_data_blocks(i,1);
         }
@@ -497,10 +518,15 @@ void fs_resize(char name[5], int new_size) {
                 block_flags[i + new_start_block] = 1;
             }
 
+            //allocate the following blocks
+            for (int i = 0 ; i < size_gap; i ++ ) {
+                block_flags[i+size+new_start_block] = 1;
+            }
+            printf("NEW start block: %d --- %d\n",new_start_block,inode_index);
             super_block.inode[inode_index].start_block = new_start_block;
             uint8_t updated_size = new_size;
             set_bit(&updated_size, BYTE_LENGTH-1);
-            super_block.inode[inode_index].used_size = new_size;
+            super_block.inode[inode_index].used_size = updated_size;
             update_free_block_list(block_flags,super_block.free_block_list);
             save_super_block();
         }
@@ -533,7 +559,26 @@ void fs_read(char name[5], int block_num) {
 }
 
 void fs_cd(char name[5]) {
-    int inode_index = search_for_name(current_dir, name, super_block.inode);
+    int inode_index;
+
+    if (strcmp(name,".") == 0 ){
+        return;
+    }
+
+    if (strcmp(name,"..") == 0) {
+        if (current_dir == 127){
+            return;
+        }
+        if (parent_dir == 127) {
+            current_dir = 127;
+            return;
+        }
+        inode_index = parent_dir;
+    }
+    else{
+        inode_index = search_for_name(current_dir, name, super_block.inode);
+    }
+
 
     if (inode_index == -1 || is_bit_set(super_block.inode[inode_index].dir_parent,BYTE_LENGTH-1) == 0){
         fprintf(stderr, "Error: Directory %s does not exist\n",name);
@@ -544,6 +589,7 @@ void fs_cd(char name[5]) {
     clear_bit(&par_dir, BYTE_LENGTH-1);
     parent_dir = par_dir;
     current_dir = inode_index;
+    printf("Change DIR p: %d c: %d\n",parent_dir,current_dir);
 }
 
 /************************
@@ -580,9 +626,9 @@ int find_fit_blocks(int size) {
 }
 
 int compare(const void *a, const void* b) {
-    Inode *inode1 = (Inode *)a;
-    Inode *inode2 = (Inode *)b;
-    return (inode1->start_block - inode2->start_block);
+    InodeIndex *inode1 = (InodeIndex *)a;
+    InodeIndex *inode2 = (InodeIndex* )b;
+    return (inode1->inode.start_block -  inode2->inode.start_block);
 }
 
 void print_command_error(char* input_file, int line_num){
@@ -602,25 +648,23 @@ int consistency_check() {
     int block_flags[128] = {0};  // 0 not used, 1 used
     get_block_flags(block_flags, temp_super_block.free_block_list);
 
-
-    //debug
-    // for (int i = 0 ; i < 128; i ++){
-    //     printf("%d ",block_flags[i]);
-    // }
-
     // Blocks that are marked free in the free-space list cannot be allocated to any file
 
     int block_reference_count_table[128] = {0};
 
     for (int i = 0 ; i < 126 ; i ++) {
         Inode inode = temp_super_block.inode[i];
-        if (inode.used_size != 0) {
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
+            printf("Inode: %d\n",i);
             uint8_t used_size = inode.used_size; 
             clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
             uint8_t start_block = inode.start_block;
             for (int j = 0 ; j < used_size ; j ++) {
 
                 block_reference_count_table[start_block + j] += 1; // increment the refernce count of this block by 1
+                if (start_block +j == 2) {
+                    printf("-------Inode: %d, start block: %d\n",i,start_block);
+                }
 
                 if (block_flags[start_block + j] == 0) { // if this block is marked as unused: Error!
                     printf("%d\n",start_block + j);
@@ -634,7 +678,7 @@ int consistency_check() {
     // Blocks marked in use in the free-space list must be allocated to exactly one file
     for (int i = 0 ; i < 128 ; i ++ ) {
         if (block_reference_count_table[i] > 1){ // if this block is referred more than once : Error !
-            printf("Fail 1.2\n");
+            printf("Fail 1.2 Block %d\n",i);
             return 1;
         }
     }
@@ -832,6 +876,7 @@ int get_directory_size(uint8_t current_dir,Inode* inode_list) {
         uint8_t par_dir = inode.dir_parent;
         clear_bit(&par_dir,BYTE_LENGTH-1);
         if (is_bit_set(inode.used_size, BYTE_LENGTH-1) && par_dir == current_dir ) {
+            // printf("get_dir size: inode: %d\n",i);
             counter += 1;
         }
     }

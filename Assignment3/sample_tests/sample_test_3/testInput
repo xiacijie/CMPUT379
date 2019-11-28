@@ -1,0 +1,6 @@
+M disk1
+C file1 1
+C file2 3
+E file1 10
+R file1 0
+L
