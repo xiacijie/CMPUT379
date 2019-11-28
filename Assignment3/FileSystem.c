@@ -101,6 +101,40 @@ int main(int argc, char* argv[]){
             break;
         }
 
+        case 'E': {
+
+            char name[1024];
+            int new_size;
+            if (sscanf(line, "E %s %d\n",name,&new_size) != 2 || strlen(name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+
+            fs_resize(name, new_size);
+            break;
+        }
+        case 'R': {
+            char name[1024];
+            int block_num;
+            if (sscanf(line, "R %s %d\n",name,&block_num) != 2 || strlen(name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+
+            fs_read(name, block_num);
+            break;
+        }
+        case 'Y': {
+            char name[1024];
+            if (sscanf(line, "Y %s\n", name) != 1 || strlen(name) > 5) {
+                print_command_error(argv[1], line_num);
+                break;
+            }
+
+            fs_cd(name);
+            break;
+        }
+
         default:
             print_command_error(argv[1], line_num);
             break;
@@ -188,54 +222,31 @@ void fs_create(char name[5], int size) {
         set_bit((uint8_t*)&super_block.inode[available_inode_index].dir_parent,BYTE_LENGTH-1);
     }
     else { // file
-         // scan for available data blocks
-        int block_flags[128] = {0};
-        get_block_flags(block_flags,super_block.free_block_list);
-        int start_block = -1;
-        int end_block = -1;
-        for (int i = 0; i < 128; i ++){
-            int find = 0;
-            for (int j = i ; j < 128; j ++) {
-                if (block_flags[j] == 1) {
-                    break;
-                }
-                else {
-                    if (j-i+1 == size) { // find the first block area
-                        start_block = i;
-                        end_block = j;
-                        find = 1;
-                        break;
-
-                    }
-                }
-            }
-            if (find) {
-                break;
-            }
-        }
-
+        // scan for available data blocks
+        
+        int start_block = find_fit_blocks(size);
         // no fit blocks
-        if (start_block == -1 && end_block == - 1){
+        if (start_block == -1){
             fprintf(stderr, "Error: Cannot allocate %s on %s\n",trimmed_name,disk_name);
             return;
         }
 
+        int block_flags[128] = {0};
+        get_block_flags(block_flags,super_block.free_block_list);
+
         // update block flags
-        for (int i = start_block; i <= end_block; i ++){
+        for (int i = start_block; i < start_block + size; i ++){
             block_flags[i] = 1;
         }
 
         //update free block list
         update_free_block_list(block_flags,super_block.free_block_list);
-        int new_flags[128];
-        get_block_flags(new_flags,super_block.free_block_list);
 
         strncpy(super_block.inode[available_inode_index].name, trimmed_name,5);
         super_block.inode[available_inode_index].used_size = size;
         super_block.inode[available_inode_index].start_block = start_block;
         set_bit(&super_block.inode[available_inode_index].used_size,BYTE_LENGTH-1);
         super_block.inode[available_inode_index].dir_parent = current_dir;
-
     }
 
     //write to disk
@@ -325,7 +336,7 @@ void fs_write(char name[5], int block_num) {
     uint8_t start_block = inode.start_block;
     uint8_t size = inode.used_size;
     clear_bit(&size, BYTE_LENGTH-1);
-    if (block_num > size - 1) {
+    if (block_num > size - 1 || block_num < 0) {
         fprintf(stderr, "Error: %s does not have block %d\n",name, block_num);
         return;
     }
@@ -417,11 +428,157 @@ void fs_defrag(void) {
 
 }
 
+void fs_resize(char name[5], int new_size) {
+    int inode_index = search_for_name(current_dir,name,super_block.inode);
+    if (inode_index == -1) {
+        fprintf(stderr, "Error: File %s does not exist\n", name);
+    }
+    Inode inode = super_block.inode[inode_index];
+    uint8_t size = inode.used_size;
+    clear_bit(&size, BYTE_LENGTH-1);
+
+    if (new_size == size) {
+        return;
+    }
+
+    int block_flags[128] = {0};
+    get_block_flags(block_flags,super_block.free_block_list);
+
+    uint8_t start_block = inode.start_block;
+    if (new_size < size) { //size smaller that current size
+        for (int i = start_block + size -1 ; i < start_block + new_size; i ++) {
+            block_flags[i] = 0;
+            clear_data_blocks(i,1);
+        }
+
+        uint8_t updated_size = new_size;
+        set_bit(&updated_size, BYTE_LENGTH-1);
+        super_block.inode[inode_index].used_size = updated_size;
+        update_free_block_list(block_flags,super_block.free_block_list);
+        save_super_block();
+    }
+    else { // size greater than the current size
+        int size_gap = new_size - size;
+        int following_size = 0;
+        int end_block = start_block + size;
+        int k = end_block;
+
+        while (k < 128 && block_flags[k] == 0){
+            following_size ++;
+            k ++;
+        }
+
+        if (following_size >= size_gap) { // append after the current allocated blocks
+            for (int i = end_block; i < end_block + size_gap; i ++) {
+                block_flags[i] = 1;
+            }
+            update_free_block_list(block_flags, super_block.free_block_list);
+            uint8_t updated_size = new_size;
+            set_bit(&updated_size, BYTE_LENGTH-1);
+            super_block.inode[inode_index].used_size = updated_size;
+            save_super_block();
+        }
+        else { // find other blocks
+            int new_start_block = find_fit_blocks(new_size);
+            if (new_start_block == -1){
+                fprintf(stderr,"Error: File %s cannot expand to size %d\n",name,new_size);
+                return;
+            }
+
+            //copy old block to new blocks
+            for (int i = 0; i < size; i ++) {
+                Block block = get_data_block(i + start_block);
+                //copy to new block
+                write_data_block(block,new_start_block + i);
+                //clear old block
+                clear_data_blocks(start_block + 1, 1);
+                //set flags
+                block_flags[i+ start_block] = 0;
+                block_flags[i + new_start_block] = 1;
+            }
+
+            super_block.inode[inode_index].start_block = new_start_block;
+            uint8_t updated_size = new_size;
+            set_bit(&updated_size, BYTE_LENGTH-1);
+            super_block.inode[inode_index].used_size = new_size;
+            update_free_block_list(block_flags,super_block.free_block_list);
+            save_super_block();
+        }
+
+    }
+}
+
+void fs_read(char name[5], int block_num) {
+    int inode_index = search_for_name(current_dir, name, super_block.inode);
+    if (inode_index == -1){
+        fprintf(stderr, "Error: File %s does not exist\n", name);
+        return;
+    }
+
+    Inode inode = super_block.inode[inode_index];
+    
+    uint8_t start_block = inode.start_block;
+    uint8_t size = inode.used_size;
+    clear_bit(&size, BYTE_LENGTH-1);
+    if (block_num > size - 1 || block_num < 0) {
+        fprintf(stderr, "Error: %s does not have block %d\n",name, block_num);
+        return;
+    }
+
+    Block block = get_data_block(start_block + block_num);
+    for (int i = 0; i < 1024; i ++) {
+        buffer.bytes[i] = block.bytes[i];
+    }
+
+}
+
+void fs_cd(char name[5]) {
+    int inode_index = search_for_name(current_dir, name, super_block.inode);
+
+    if (inode_index == -1 || is_bit_set(super_block.inode[inode_index].dir_parent,BYTE_LENGTH-1) == 0){
+        fprintf(stderr, "Error: Directory %s does not exist\n",name);
+        return;
+    }
+
+    uint8_t par_dir = super_block.inode[inode_index].dir_parent;
+    clear_bit(&par_dir, BYTE_LENGTH-1);
+    parent_dir = par_dir;
+    current_dir = inode_index;
+}
 
 /************************
  *  Helper functions  ***
  *                    ***
  * *********************/
+int find_fit_blocks(int size) {
+
+    int block_flags[128] = {0};
+    get_block_flags(block_flags,super_block.free_block_list);
+    int start_block = -1;
+    int end_block = -1;
+    for (int i = 0; i < 128; i ++){
+        int find = 0;
+        for (int j = i ; j < 128; j ++) {
+            if (block_flags[j] == 1) {
+                break;
+            }
+            else {
+                if (j-i+1 == size) { // find the first block area
+                    start_block = i;
+                    end_block = j;
+                    find = 1;
+                    break;
+
+                }
+            }
+        }
+        if (find) {
+            break;
+        }
+    }
+    return start_block;
+}
+
 int compare(const void *a, const void* b) {
     Inode *inode1 = (Inode *)a;
     Inode *inode2 = (Inode *)b;
