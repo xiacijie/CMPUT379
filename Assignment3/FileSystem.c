@@ -24,7 +24,7 @@ int main(int argc, char* argv[]){
     while(fgets(line, sizeof(line), input_file)) {
         
         line_num ++;
-        printf("%s", line);
+
         
         char command = line[0];
 
@@ -92,6 +92,12 @@ int main(int argc, char* argv[]){
 
         case 'L': {
             fs_ls();
+            break;
+        }
+
+        case 'O': {
+            fs_defrag();
+            break;
         }
 
         default:
@@ -155,8 +161,6 @@ void fs_create(char name[5], int size) {
         return;
     }
 
-    printf("fs create: use inode %d\n",available_inode_index);
-
     //trim name
     char temp_name[1024];
     strcpy(temp_name, name);
@@ -216,7 +220,6 @@ void fs_create(char name[5], int size) {
         }
 
         // update block flags
-        printf("start block: %d end block %d\n",start_block,end_block);
         for (int i = start_block; i <= end_block; i ++){
             block_flags[i] = 1;
         }
@@ -225,11 +228,7 @@ void fs_create(char name[5], int size) {
         update_free_block_list(block_flags,super_block.free_block_list);
         int new_flags[128];
         get_block_flags(new_flags,super_block.free_block_list);
-        printf("\n");
-        for (int i = 0 ; i < 128 ; i ++ ){
-            
-            printf("%d ",new_flags[i]);
-        }
+
         strncpy(super_block.inode[available_inode_index].name, trimmed_name,5);
         super_block.inode[available_inode_index].used_size = size;
         super_block.inode[available_inode_index].start_block = start_block;
@@ -338,7 +337,7 @@ void fs_write(char name[5], int block_num) {
     write_data_block(new_block, start_block + block_num);
 }
 
-void fs_ls() {
+void fs_ls(void) {
     printf("%-5s %3d\n", ".", get_directory_size(current_dir, super_block.inode));
     printf("%-5s %3d\n", "..", get_directory_size(parent_dir, super_block.inode));
 
@@ -354,7 +353,10 @@ void fs_ls() {
                 if (parent == current_dir) {
                     uint8_t size = inode.used_size;
                     clear_bit(&size,BYTE_LENGTH-1);
-                    printf("%-5s %3d KB\n", inode.name, size);
+                    char print_name[6];
+                    strncpy(print_name,inode.name,5);
+                    print_name[5] = '\0';
+                    printf("%-5s %3d KB\n", print_name, size);
                 }
             }
             else { //dir
@@ -364,6 +366,10 @@ void fs_ls() {
             }
         }
     }
+}
+
+void fs_defrag(void) {
+
 }
 
 
@@ -391,9 +397,9 @@ int consistency_check() {
 
 
     //debug
-    for (int i = 0 ; i < 128; i ++){
-        printf("%d ",block_flags[i]);
-    }
+    // for (int i = 0 ; i < 128; i ++){
+    //     printf("%d ",block_flags[i]);
+    // }
 
     // Blocks that are marked free in the free-space list cannot be allocated to any file
 
@@ -405,7 +411,6 @@ int consistency_check() {
             uint8_t used_size = inode.used_size; 
             clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
             uint8_t start_block = inode.start_block;
-            printf("used size :%d\n", used_size);
             for (int j = 0 ; j < used_size ; j ++) {
 
                 block_reference_count_table[start_block + j] += 1; // increment the refernce count of this block by 1
