@@ -1,5 +1,6 @@
 #include "FileSystem.h"
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <stdio.h>
 
@@ -369,6 +370,50 @@ void fs_ls(void) {
 }
 
 void fs_defrag(void) {
+    int block_flags[128] = {0};
+    get_block_flags(block_flags,super_block.free_block_list);
+
+    Inode sorted_files[126];
+    int files_size = 0;
+    for (int i = 1; i < 128; i ++) {
+        Inode inode = super_block.inode[i];
+        if (is_bit_set(inode.used_size, BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1)==0) {
+            sorted_files[files_size++] = inode;
+        }
+    }
+
+    //sort the files by start block
+    qsort(sorted_files,files_size,sizeof(Inode), compare);
+    for (int i = 0 ; i < files_size; i ++) {
+
+        Inode inode = sorted_files[i];
+        uint8_t start_block = inode.start_block;
+        uint8_t size = inode.used_size;
+        clear_bit(&size, BYTE_LENGTH-1);
+        for (int j = start_block; j < start_block + size; j ++ ) {
+
+            int smallest_number = j - 1;
+            while (1) {
+                if (block_flags[smallest_number] == 1 || smallest_number == 0) {
+                    break;
+                }
+                else{
+                    smallest_number --;
+                }
+            }
+
+            Block block = get_data_block(j);
+            clear_data_blocks(j,1);
+            write_data_block(block, smallest_number);
+            block_flags[j] = 0;
+            block_flags[smallest_number+1] = 1;
+            
+        }
+
+    }
+
+    update_free_block_list(block_flags,super_block.free_block_list);
+    save_super_block();
 
 }
 
@@ -377,6 +422,11 @@ void fs_defrag(void) {
  *  Helper functions  ***
  *                    ***
  * *********************/
+int compare(const void *a, const void* b) {
+    Inode *inode1 = (Inode *)a;
+    Inode *inode2 = (Inode *)b;
+    return (inode1->start_block - inode2->start_block);
+}
 
 void print_command_error(char* input_file, int line_num){
     fprintf(stderr, "Command Error: %s, %d\n", input_file, line_num);
@@ -641,6 +691,13 @@ void clear_data_blocks(uint8_t start_block, uint8_t size) {
     for (uint8_t i = 0; i < size; i ++) {
         fwrite(&empty_block, sizeof(Block), 1, disk); // clear each data block
     }
+}
+
+Block get_data_block(int global_block_num) {
+    fseek(disk, global_block_num* sizeof(Block), SEEK_SET);
+    Block block;
+    fread(&block,sizeof(Block),1,disk);
+    return block;
 }
 
 void write_data_block(Block block, int global_block_num) {

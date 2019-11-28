@@ -37,6 +37,7 @@ void fs_defrag(void);
 void fs_cd(char name[5]);
 
 /*** Helper functions ***/
+int compare(const void *a, const void* b);
 void print_command_error(char* input_file, int line_num);
 int consistency_check();
 int is_bit_set(uint8_t ch, int i);
@@ -48,5 +49,6 @@ void update_free_block_list(int* block_flags, char* free_block_list);
 int search_for_name(uint8_t current_dir, char name[5], Inode* inode_list);
 void clear_data_blocks(uint8_t start_block, uint8_t size);
 void write_data_block(Block block, int global_block_num);
+Block get_data_block(int global_block_num);
 int get_directory_size(uint8_t current_dir,Inode* inode_list);
 void save_super_block();
