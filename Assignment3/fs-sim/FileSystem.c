@@ -659,7 +659,6 @@ int find_fit_blocks(int size) {
     int block_flags[128] = {0};
     get_block_flags(block_flags,super_block.free_block_list);
     int start_block = -1;
-    int end_block = -1;
     for (int i = 0; i < 128; i ++){
         int find = 0;
         for (int j = i ; j < 128; j ++) {
