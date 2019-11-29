@@ -16,7 +16,7 @@ W test 2
 L
 M diskthatnotexist
 L
-B
+B      
 B This is a test sentence.!@#$%^&*() Lots of symbols as well.
 C test2 10
 C fd1 0

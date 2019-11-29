@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
     int line_num = 0;
     while(fgets(line, sizeof(line), input_file)) {
         line_num ++;
-
+        char* trimmed_line = trimwhitespace(line);
         // printf("%s\n",line);
         char command = line[0];
 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
         case 'M': { //fs_mount
 
             char disk_name[512];
-            if (sscanf(line, "M %s\n",disk_name) != 1 || num_words(line) != 2){
+            if (sscanf(trimmed_line, "M %s\n",disk_name) != 1 || num_words(trimmed_line) != 2){
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
   
             char file_name[512];
             int size;
-            if (sscanf(line, "C %s %d\n", file_name, &size) != 2 || strlen(file_name) > 5 || num_words(line) != 3 || size < 0 || size > 127) {
+            if (sscanf(trimmed_line, "C %s %d\n", file_name, &size) != 2 || strlen(file_name) > 5 || num_words(trimmed_line) != 3 || size < 0 || size > 127) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
         case 'D' : { //fs_delete
 
             char file_name[512];
-            if (sscanf(line, "D %s\n", file_name) != 1 || strlen(file_name) > 5 || num_words(line) != 2) {
+            if (sscanf(trimmed_line, "D %s\n", file_name) != 1 || strlen(file_name) > 5 || num_words(trimmed_line) != 2) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -73,15 +73,15 @@ int main(int argc, char* argv[]){
 
             char buff[1024];
             char copy[1024];
-            strcpy(copy, line);
+            strcpy(copy, trimmed_line);
 
             if (num_words(copy) == 1 ) {
                 print_command_error(argv[1], line_num);
                 break;
             }
 
-            strncpy(buff, line+2, strlen(line)-3);  // dot not copy /n
-            buff[strlen(line)-3] = '\0';
+            strncpy(buff, line+2, strlen(trimmed_line)-3);  // dot not copy /n
+            buff[strlen(trimmed_line)-3] = '\0';
 
             fs_buff((uint8_t*)buff);
             break;
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]){
             
             char name[1024];
             int block_num;
-            if (sscanf(line, "W %s %d\n", name, &block_num) != 2 || strlen(name) > 5 || num_words(line) != 3) {
+            if (sscanf(trimmed_line, "W %s %d\n", name, &block_num) != 2 || strlen(name) > 5 || num_words(trimmed_line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]){
         }
 
         case 'L': {
-            if ( num_words(line) != 1){
+            if ( num_words(trimmed_line) != 1){
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
         }
 
         case 'O': {
-            if (num_words(line) != 1){
+            if (num_words(trimmed_line) != 1){
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]){
 
             char name[1024];
             int new_size;
-            if (sscanf(line, "E %s %d\n",name,&new_size) != 2 || strlen(name) > 5 || num_words(line) != 3) {
+            if (sscanf(trimmed_line, "E %s %d\n",name,&new_size) != 2 || strlen(name) > 5 || num_words(trimmed_line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]){
         case 'R': {
             char name[1024];
             int block_num;
-            if (sscanf(line, "R %s %d\n",name,&block_num) != 2 || strlen(name) > 5|| num_words(line) != 3) {
+            if (sscanf(trimmed_line, "R %s %d\n",name,&block_num) != 2 || strlen(name) > 5|| num_words(trimmed_line) != 3) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]){
         }
         case 'Y': {
             char name[1024];
-            if (sscanf(line, "Y %s\n", name) != 1 || strlen(name) > 5|| num_words(line) != 2) {
+            if (sscanf(trimmed_line, "Y %s\n", name) != 1 || strlen(name) > 5|| num_words(trimmed_line) != 2) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -157,7 +157,6 @@ int main(int argc, char* argv[]){
             print_command_error(argv[1], line_num);
             break;
         }
-        memset(line,0,1024);
         
     }
     fclose(input_file);
@@ -276,6 +275,7 @@ void fs_delete(char name[5]) {
         fprintf(stderr, "Error: No file system is mounted\n" );
         return;
     }
+
     char temp_name[1024];
     strcpy(temp_name, name);
     char * trimmed_name = trimwhitespace(temp_name);
@@ -287,52 +287,8 @@ void fs_delete(char name[5]) {
         return;
     }
 
-    Inode inode = super_block.inode[inode_index];
-    if (is_bit_set((uint8_t)inode.dir_parent,BYTE_LENGTH-1)) { // if it is directory
-        //delete all files or directories in this dir
-        for (int i = 0; i < 126 ; i ++) {
-            Inode inode_i = super_block.inode[inode_index];
-            uint8_t par_dir = inode_i.dir_parent;
-            clear_bit(&par_dir, BYTE_LENGTH-1);
-            if (par_dir == inode_index) {
-                fs_delete(inode_i.name);
-            }
-        }
-
-        // clear inode data
-        super_block.inode[inode_index].dir_parent = 0;
-        memset(super_block.inode[inode_index].name, 0, 5);
-        super_block.inode[inode_index].start_block = 0;
-        super_block.inode[inode_index].used_size = 0;
-        save_super_block();
-
-    }
-    else { // it is file
-
-        uint8_t start_block = inode.start_block;
-        //clear data blocks
-        uint8_t size = inode.used_size;
-        clear_bit(&size, BYTE_LENGTH-1);
-        clear_data_blocks(start_block, size);
-
-        //clear free list
-        int block_flags[128];
-        get_block_flags(block_flags, super_block.free_block_list);
-        for (uint8_t i = start_block; i < start_block + size; i ++){
-            block_flags[i] = 0;
-        }
-
-        update_free_block_list(block_flags,super_block.free_block_list);
-    
-        super_block.inode[inode_index].dir_parent = 0;
-        memset(super_block.inode[inode_index].name, 0, 5);
-        super_block.inode[inode_index].start_block = 0;
-        super_block.inode[inode_index].used_size = 0;
-
-        save_super_block();
-
-    }
-
+    delete_file_or_directory(current_dir, trimmed_name);
+  
 
 }
 
@@ -635,6 +591,59 @@ void fs_cd(char name[5]) {
  *                    ***
  * *********************/
 
+void delete_file_or_directory(uint8_t current_dir, char name[5]) {
+
+    int inode_index = search_for_name(current_dir, name, super_block.inode);
+    Inode inode = super_block.inode[inode_index];
+    printf("delete: %s\n",name);
+    if (is_bit_set((uint8_t)inode.dir_parent,BYTE_LENGTH-1)) { // if it is directory
+        //delete all files or directories in this dir
+        for (int i = 0; i < 126 ; i ++) {
+            Inode inode_i = super_block.inode[i];
+            uint8_t par_dir = inode_i.dir_parent;
+            clear_bit(&par_dir, BYTE_LENGTH-1);
+
+            if (is_bit_set(inode_i.used_size,BYTE_LENGTH-1) && par_dir == inode_index) {
+                delete_file_or_directory(inode_index, inode_i.name);
+            }
+        }
+
+        // clear inode data
+        super_block.inode[inode_index].dir_parent = 0;
+        memset(super_block.inode[inode_index].name, 0, 5);
+        super_block.inode[inode_index].start_block = 0;
+        super_block.inode[inode_index].used_size = 0;
+        save_super_block();
+
+    }
+    else { // it is file
+
+        uint8_t start_block = inode.start_block;
+        //clear data blocks
+        uint8_t size = inode.used_size;
+        clear_bit(&size, BYTE_LENGTH-1);
+        clear_data_blocks(start_block, size);
+
+        //clear free list
+        int block_flags[128];
+        get_block_flags(block_flags, super_block.free_block_list);
+        for (uint8_t i = start_block; i < start_block + size; i ++){
+            block_flags[i] = 0;
+        }
+
+        update_free_block_list(block_flags,super_block.free_block_list);
+    
+        super_block.inode[inode_index].dir_parent = 0;
+        memset(super_block.inode[inode_index].name, 0, 5);
+        super_block.inode[inode_index].start_block = 0;
+        super_block.inode[inode_index].used_size = 0;
+
+        save_super_block();
+
+    }
+
+}
+
 int num_words(char* sentence) {
     char* token;
     int counter = 0;
@@ -814,20 +823,37 @@ inclusive ***/
     /*** 6. For every inode, the index of its parent inode cannot be 126. Moreover, if the index of the parent inode
 is between 0 and 125 inclusive, then the parent inode must be in use and marked as a directory. ***/
     for (int i = 0 ; i < 126 ; i ++ ) {
+    
         Inode inode = temp_super_block.inode[i];
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1)) { //in use
+            uint8_t parent_index = inode.dir_parent;
+            clear_bit((uint8_t*)&parent_index, BYTE_LENGTH-1);
+            if (parent_index == 126) {
 
-        uint8_t parent_index = inode.dir_parent;
-        clear_bit((uint8_t*)&parent_index, BYTE_LENGTH-1);
-        if (parent_index == 126) {
-            return 6;
-        }
-
-        if (parent_index >+ 0 && parent_index <= 125) { // directory
-            Inode parent_inode = temp_super_block.inode[parent_index];
-            if (is_bit_set((uint8_t)parent_inode.used_size,BYTE_LENGTH-1) == 0 || is_bit_set((uint8_t)parent_inode.dir_parent, BYTE_LENGTH-1) == 0 ) {
                 return 6;
             }
+
+            if (parent_index >= 0 && parent_index <= 125) { // directory
+                Inode parent_inode = temp_super_block.inode[parent_index];
+                uint8_t size = parent_inode.used_size;
+                clear_bit(&size, BYTE_LENGTH-1);
+                if (is_bit_set((uint8_t)parent_inode.used_size,BYTE_LENGTH-1) == 0 ) {
+                    printf("Current node:%d %s\n",i,inode.name);
+                    printf("parent inode: %d, %s size: %d\n", parent_index, parent_inode.name,size);
+                    printf("6.2.1\n");
+                    return 6;
+                }
+
+                if ( is_bit_set((uint8_t)parent_inode.dir_parent, BYTE_LENGTH-1) == 0) {
+            
+                    printf("Current node:%d %s\n",i,inode.name);
+                    printf("parent inode: %d, %s size: %d\n", parent_index, parent_inode.name,size);
+                    printf("6.2.2\n");
+                    return 6;
+                }
+            }
         }
+        
     }
 
     return 0;

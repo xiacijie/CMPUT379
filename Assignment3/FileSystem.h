@@ -37,6 +37,7 @@ void fs_defrag(void);
 void fs_cd(char name[5]);
 
 /*** Helper functions ***/
+void delete_file_or_directory(uint8_t current_dir, char name[5]);
 int num_words(char* sentence);
 int find_fit_blocks(int size);
 int compare(const void *a, const void* b);

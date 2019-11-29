@@ -1,0 +1,13 @@
+M clean_disk
+C dir1 0
+C dir2 0
+L
+Y dir1
+C dir3 0
+C file1 1
+C file2 2
+L
+Y ..
+L
+D dir1
+L
