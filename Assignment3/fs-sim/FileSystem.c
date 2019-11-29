@@ -668,7 +668,6 @@ int find_fit_blocks(int size) {
             else {
                 if (j-i+1 == size) { // find the first block area
                     start_block = i;
-                    end_block = j;
                     find = 1;
                     break;
 

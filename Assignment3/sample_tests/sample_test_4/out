@@ -37,57 +37,49 @@ test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-/////
-.       7
-..      7
+.       6
+..      6
 test    5 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
 .       4
-..      7
+..      6
 test    4 KB
 test2   1 KB
-.       7
-..      7
+.       6
+..      6
 test    8 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-.       7
-..      7
+.       6
+..      6
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-.       7
-..      7
+.       6
+..      6
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-.       7
-..      7
+.       6
+..      6
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-.       7
-..      7
+.       6
+..      6
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-.       7
-..      7
+.       6
+..      6
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
@@ -95,24 +87,21 @@ test4   2 KB
 ..      5
 file1   4 KB
 .       5
-..      8
+..      7
 fd1     3
 file1  10 KB
 file2   5 KB
-.       8
-..      8
+.       7
+..      7
 test    3 KB
-test2  10 KB
+fd2     5
 fd1     4
 test3   6 KB
 test4   2 KB
-fd2     5
-.       9
-..      9
+.       7
+..      7
 test    3 KB
-test2  10 KB
 fd1     4
 test3   6 KB
 test4   2 KB
-fd2     5
 file9   9 KB
