@@ -75,7 +75,7 @@ int main(int argc, char* argv[]){
             char copy[1024];
             strcpy(copy, trimmed_line);
 
-            if (num_words(copy) == 1 ) {
+            if (num_words(copy) == 1 || strlen(trimmed_line) - 2 > 1024) {
                 print_command_error(argv[1], line_num);
                 break;
             }
@@ -706,7 +706,10 @@ int consistency_check(FILE * temp_disk) {
 
     // Blocks that are marked free in the free-space list cannot be allocated to any file
 
-    int block_reference_count_table[128] = {0};
+    // for (int i = 0 ; i < 128; i ++) {
+    //     printf("%d ",block_flags[i]);
+    // }
+    // printf("===========\n");
 
     for (int i = 0 ; i < 126 ; i ++) {
         Inode inode = temp_super_block.inode[i];
@@ -716,7 +719,6 @@ int consistency_check(FILE * temp_disk) {
             uint8_t start_block = inode.start_block;
             for (int j = 0 ; j < used_size ; j ++) {
 
-                block_reference_count_table[start_block + j] += 1; // increment the refernce count of this block by 1
                 if (block_flags[start_block + j] == 0) { // if this block is marked as unused: Error!
                     return 1;
                 }
@@ -724,28 +726,40 @@ int consistency_check(FILE * temp_disk) {
         }
     }
 
+        
+
     // Blocks marked in use in the free-space list must be allocated to exactly one file
-    for (int i = 0 ; i < 128 ; i ++ ) {
-        if (block_reference_count_table[i] > 1){ // if this block is referred more than once : Error !
-            return 1;
+    int block_reference_count_table[128] = {0};
+    for (int i = 0 ; i < 126 ; i ++ ) {
+        Inode inode = temp_super_block.inode[i];
+        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
+            uint8_t used_size = inode.used_size; 
+            clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
+            uint8_t start_block = inode.start_block;
+            for (int j = 0 ; j < used_size ; j ++) {
+                if (block_reference_count_table[start_block + j] == 1){
+                    block_reference_count_table[start_block + j] = 1;
+                    return 1;
+                }
+            }
         }
     }
+
+    // for (int i = 0 ; i < 128 ; i ++) {
+    //     if (block_reference_count_table[i] > 1) {
+    //         return 1;
+    //     }
+    // }
 
     /***** 2. The name of every file/directory must be unique in each directory. *****/
     for (int i = 0 ; i < 126; i++) {
         Inode inode_i = temp_super_block.inode[i];
 
-        uint8_t dir_parent_i = inode_i.dir_parent;
-        clear_bit((uint8_t*)&dir_parent_i,BYTE_LENGTH-1);
-
-        for (int j = i+1 ; i < 126; i ++) {
+        for (int j = i+1 ; j < 126; j ++) {
             Inode inode_j = temp_super_block.inode[j];
 
-            uint8_t dir_parent_j = inode_j.dir_parent;
-            clear_bit((uint8_t*)&dir_parent_j,BYTE_LENGTH-1);
-
-            if (inode_i.used_size != 0 && inode_j.used_size != 0 ) { // inodes are in use
-                if (strcmp(inode_i.name, inode_j.name) == 0) { // duplicate name: Error
+            if (is_bit_set(inode_i.used_size,BYTE_LENGTH-1) && is_bit_set(inode_j.used_size,BYTE_LENGTH-1) != 0 ) { // inodes are in use
+                if (strncmp(inode_i.name, inode_j.name,5) == 0) { // duplicate name: Error
                     return 2;
                 }
             }
