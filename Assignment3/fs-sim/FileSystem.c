@@ -705,51 +705,38 @@ int consistency_check(FILE * temp_disk) {
     get_block_flags(block_flags, temp_super_block.free_block_list);
 
     // Blocks that are marked free in the free-space list cannot be allocated to any file
-
-    // for (int i = 0 ; i < 128; i ++) {
-    //     printf("%d ",block_flags[i]);
-    // }
-    // printf("===========\n");
-
-    for (int i = 0 ; i < 126 ; i ++) {
-        Inode inode = temp_super_block.inode[i];
-        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
-            uint8_t used_size = inode.used_size; 
-            clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
-            uint8_t start_block = inode.start_block;
-            for (int j = 0 ; j < used_size ; j ++) {
-
-                if (block_flags[start_block + j] == 0) { // if this block is marked as unused: Error!
-                    return 1;
-                }
-            }
-        }
-    }
-
-        
-
     // Blocks marked in use in the free-space list must be allocated to exactly one file
-    int block_reference_count_table[128] = {0};
-    for (int i = 0 ; i < 126 ; i ++ ) {
-        Inode inode = temp_super_block.inode[i];
-        if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
-            uint8_t used_size = inode.used_size; 
-            clear_bit((uint8_t*)&used_size,BYTE_LENGTH-1);
-            uint8_t start_block = inode.start_block;
-            for (int j = 0 ; j < used_size ; j ++) {
-                if (block_reference_count_table[start_block + j] == 1){
-                    block_reference_count_table[start_block + j] = 1;
-                    return 1;
+
+    for (int i = 1 ; i < 128; i ++) {
+        int once = 0;
+        for (int j = 0; j < 126 ; j ++) {
+            Inode inode = temp_super_block.inode[j];
+            if (is_bit_set(inode.used_size,BYTE_LENGTH-1) && is_bit_set(inode.dir_parent,BYTE_LENGTH-1) == 0) {
+                uint8_t used_size = inode.used_size;
+                clear_bit(&used_size,BYTE_LENGTH-1);
+                if (i >= inode.start_block && i < inode.start_block + used_size) {
+                    if (block_flags[i] == 0){
+                        return 1;
+                    }
+
+                    if (block_flags[i] == 1){
+                        if (once == 0){
+                            once = 1;
+                        }
+                        else{
+                            return 1;
+                        }
+                    }
                 }
             }
         }
+
+        if (block_flags[i] == 1 && !once) {
+            return 1;
+        }
+
     }
 
-    // for (int i = 0 ; i < 128 ; i ++) {
-    //     if (block_reference_count_table[i] > 1) {
-    //         return 1;
-    //     }
-    // }
 
     /***** 2. The name of every file/directory must be unique in each directory. *****/
     for (int i = 0 ; i < 126; i++) {
